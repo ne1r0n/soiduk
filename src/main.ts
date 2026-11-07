@@ -159,9 +159,9 @@ function stopCard(loc: LocationCfg, stop: StopCfg, goal: GoalCfg | undefined, id
   const list = rows.slice(0, 1 + MAX_EXTRA_ROWS).map(r => `
     <li>
       ${badge(r)}
-      <span class="dest">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>
-      <span class="when">${fmtClock(r.arrive ? r.arrive.sec : r.dep.expected)}${delayTag(r.delaySec)}</span>
-      <span class="in">${leaveText(r.leaveInSec)}${r.arrive ? ` · в пути ${Math.round(r.arrive.travelSec / 60)} мин` : ''}</span>
+      <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="Прибытие">(${fmtClock(r.arrive.sec)})</span>` : ''}</span>
+      <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
+      <span class="in">${leaveText(r.leaveInSec)}</span>
     </li>`).join('');
   return shell(`<ul class="rows">${list}</ul>`, lvl);
 }
@@ -221,12 +221,12 @@ function editor(): string {
       <button class="btn primary" data-act="add-loc">＋ Локация</button>
       <div class="sec-title">Резервная копия</div>
       <div class="io">
-        <button class="btn" data-act="share-link">🔗 Ссылка</button>
-        <button class="btn" data-act="export-file">⬇ Файл</button>
-        <button class="btn" data-act="import-file">⬆ Загрузить</button>
+        <button class="btn" data-act="share-link">🔗 Поделиться</button>
+        <button class="btn" data-act="export-file">⬇ Экспорт</button>
+        <button class="btn" data-act="import-file">⬆ Импорт</button>
       </div>
-      ${loadPrev() ? '<button class="btn ghost" data-act="restore-prev">↩ Вернуть настройки, которые были до последней загрузки</button>' : ''}
-      <p class="hint muted">Настройки хранятся только в этом браузере. Ссылка содержит их все: откройте её на другом устройстве или отправьте другу – предложат импортировать.</p>
+      ${loadPrev() ? '<button class="btn ghost" data-act="restore-prev">↩ Вернуть настройки, которые были до последнего импорта</button>' : ''}
+      <p class="hint muted">Настройки хранятся только в этом браузере. «Поделиться» создаёт ссылку со всеми настройками: откройте её на другом устройстве или отправьте другу – предложат импортировать. «Экспорт» сохраняет файл, «Импорт» загружает его.</p>
       <footer class="about">
         ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">☕ Поддержать на Ko-fi</a>` : ''}
         <p class="muted">Данные: <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · Карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
@@ -337,7 +337,7 @@ function describe(c: Config): string {
 
 async function offerImport(next: Config, source: string) {
   const have = cfg.locations.length ? `Текущие настройки (${describe(cfg)}) будут заменены, но их можно вернуть.` : '';
-  if (confirm(`Загрузить настройки из ${source}? ${describe(next)}. ${have}`)) { replaceConfig(next); view = 'dash'; render(); updateLive(); }
+  if (confirm(`Импортировать настройки из ${source}? ${describe(next)}. ${have}`)) { replaceConfig(next); view = 'dash'; render(); updateLive(); }
 }
 
 // ---------- render ----------
@@ -428,7 +428,7 @@ async function onClick(e: MouseEvent) {
     }
     case 'restore-prev': {
       const prev = loadPrev();
-      if (prev && confirm('Вернуть настройки, которые были до последней загрузки? Текущие станут «предыдущими».')) replaceConfig(prev);
+      if (prev && confirm('Вернуть настройки, которые были до последнего импорта? Текущие станут «предыдущими».')) replaceConfig(prev);
       break;
     }
   }
