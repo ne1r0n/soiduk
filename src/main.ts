@@ -145,7 +145,7 @@ function stopCard(loc: LocationCfg, stop: StopCfg, goal: GoalCfg | undefined, id
   const stale = failed.has(stop.siriId) ? ' <span class="stale" title="Данные устарели">⚠</span>' : '';
   const head = `<header>
       <div class="stop-title"><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
-      <span class="walk">🚶 ${walk} мин${stale}</span></header>`;
+      <div class="head-right"><span class="walk">🚶 ${walk} мин${stale}</span><span class="dirs">отправление</span></div></header>`;
   const shell = (inner: string, cls = '') => ({ html: `<section class="card ${cls}">${head}${inner}</section>`, empty: false });
   if (!data.has(stop.siriId)) return shell(`<p class="muted">${loading || !fetchedAt ? 'Загрузка…' : 'Нет данных'}</p>`);
 
