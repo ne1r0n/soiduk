@@ -200,3 +200,9 @@ main { gap: 22px; }
 
 .io { margin-top: 2px; }
 .io .btn { flex: 1; }
+
+/* about / support */
+.about { text-align: center; display: grid; gap: 10px; margin-top: 6px; }
+.about p { margin: 0; font-size: 12px; }
+.about a { color: var(--muted); }
+.about .kofi { justify-self: center; padding: 10px 18px; border-radius: 12px; font-weight: 600; font-size: 14px; text-decoration: none; color: #1a1205; background: #ffb454; }

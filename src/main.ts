@@ -3,6 +3,7 @@ import { fetchDepartures, type Mode, type StopDepartures } from './api.ts';
 import { buildRows, clearArrivalCache, fmtClock, fmtMinutes, type GoalCfg, type LocationCfg, type Row, type StopCfg } from './plan.ts';
 import { load, loadPrev, loadSelection, save, savePrev, saveSelection, sanitize, uid, type Config } from './store.ts';
 import { decodeConfig, encodeConfig, slim } from './share.ts';
+import { KOFI_URL } from './config.ts';
 import { loadStops, type StopInfo } from './stops.ts';
 import { buildIndex, type GtfsIndex } from './trip.ts';
 import { closePicker, openPicker, refreshPicker } from './picker.ts';
@@ -226,6 +227,10 @@ function editor(): string {
       </div>
       ${loadPrev() ? '<button class="btn ghost" data-act="restore-prev">↩ Вернуть настройки, которые были до последней загрузки</button>' : ''}
       <p class="hint muted">Настройки хранятся только в этом браузере. Ссылка содержит их все: откройте её на другом устройстве или отправьте другу – предложат импортировать.</p>
+      <footer class="about">
+        ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">☕ Поддержать на Ko-fi</a>` : ''}
+        <p class="muted">Данные: <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · Карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+      </footer>
     </main>
 `;
 }
