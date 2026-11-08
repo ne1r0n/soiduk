@@ -1,4 +1,5 @@
 ---
+
 name: Идея
 about: Предложить улучшение
 labels: enhancement

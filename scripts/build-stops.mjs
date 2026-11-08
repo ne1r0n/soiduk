@@ -12,27 +12,27 @@ const out = [];
 const nameById = new Map();
 let lastName = '';
 for (const line of text.split(/\r?\n/).slice(1)) {
-  if (!line.trim()) continue;
-  const f = line.split(';');
-  const [id, siri, lat, lng] = f;
-  const name = f[5] || lastName;
-  if (f[5]) lastName = f[5];
-  nameById.set(id, name);
-  if (!siri || !/^\d+$/.test(siri)) continue; // area rows / no realtime id
-  out.push({
-    s: Number(siri),
-    n: name,
-    st: f[7] && f[7] !== '0' ? f[7] : '',
-    la: Number(lat) / 1e5,
-    lo: Number(lng) / 1e5,
-    id,
-    ar: f[8] && f[8] !== '0' ? f[8] : '',
-    nbIds: (f[4] || '').split(','),
-  });
+	if (!line.trim()) continue;
+	const f = line.split(';');
+	const [id, siri, lat, lng] = f;
+	const name = f[5] || lastName;
+	if (f[5]) lastName = f[5];
+	nameById.set(id, name);
+	if (!siri || !/^\d+$/.test(siri)) continue; // area rows / no realtime id
+	out.push({
+		s: Number(siri),
+		n: name,
+		st: f[7] && f[7] !== '0' ? f[7] : '',
+		la: Number(lat) / 1e5,
+		lo: Number(lng) / 1e5,
+		id,
+		ar: f[8] && f[8] !== '0' ? f[8] : '',
+		nbIds: (f[4] || '').split(','),
+	});
 }
 for (const o of out) {
-  o.nb = [...new Set(o.nbIds.map(i => nameById.get(i)).filter(n => n && n !== o.n))];
-  delete o.nbIds;
+	o.nb = [...new Set(o.nbIds.map((i) => nameById.get(i)).filter((n) => n && n !== o.n))];
+	delete o.nbIds;
 }
 await writeFile(new URL('../public/stops.json', import.meta.url), JSON.stringify(out));
 console.log(`wrote ${out.length} stops`);
