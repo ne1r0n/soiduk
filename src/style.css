@@ -872,6 +872,31 @@ main {
 	flex: 1;
 }
 
+/* QR code of the app, to show to someone else */
+.qr summary {
+	cursor: pointer;
+	text-align: center;
+	color: var(--muted);
+	font-size: 14px;
+	padding: 8px;
+}
+.qr-box {
+	width: 200px;
+	margin: 8px auto;
+	border-radius: 12px;
+	overflow: hidden;
+	line-height: 0;
+}
+.qr-box svg {
+	width: 100%;
+	height: auto;
+}
+.qr p {
+	text-align: center;
+	font-size: 12px;
+	margin: 0;
+}
+
 /* about / support */
 .about {
 	text-align: center;

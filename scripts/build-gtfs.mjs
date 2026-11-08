@@ -180,7 +180,6 @@ function simplify(pts, tol) {
 	}
 	return pts.filter((_, i) => keep[i]);
 }
-const shapeIds = [];
 const shapeIdx = new Map();
 const shapes = [];
 const simplified = new Map();

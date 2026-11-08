@@ -1,7 +1,8 @@
-import { KOFI_URL } from './config.ts';
+import { APP_URL, KOFI_URL } from './config.ts';
 import { stopInfo } from './gtfs.ts';
 import { getLang, LANG_NAMES, LANGS, plural, t } from './i18n.ts';
 import type { GoalCfg, LocationCfg, StopCfg } from './plan.ts';
+import qrSvg from './qr.svg?raw';
 import { edit, knownRoutes, state, stopKey } from './state.ts';
 import { loadPrev } from './store.ts';
 import { loadTheme, THEMES } from './theme.ts';
@@ -153,6 +154,11 @@ function appTab(): string {
       </div>
       ${loadPrev() ? `<button class="btn ghost" data-act="restore-prev">${t('ed.restore')}</button>` : ''}
       <p class="hint muted">${t('ed.backupHint')}</p>
+      <details class="qr">
+        <summary>${t('ed.qr')}</summary>
+        <div class="qr-box" role="img" aria-label="${esc(APP_URL)}">${qrSvg}</div>
+        <p class="muted">${t('ed.qrHint')}</p>
+      </details>
       <footer class="about">
         ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">${t('ed.kofi')}</a>` : ''}
         <p class="muted">${t('ed.data')} <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · ${t('ed.mapBy')} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>

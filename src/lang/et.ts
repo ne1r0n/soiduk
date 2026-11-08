@@ -111,6 +111,8 @@ export const et: Record<Key, string> = {
 	'ed.backupHint':
 		'Seaded on salvestatud ainult selles brauseris. „Jaga” loob lingi kõigi seadetega: avage see teises seadmes või saatke sõbrale.',
 	'ed.kofi': '☕ Toeta Ko-fis',
+	'ed.qr': 'Näita rakenduse QR-koodi',
+	'ed.qrHint': 'Lase teisel telefoni kaameraga skannida, et avada Sõiduki avaleht.',
 	'ed.data': 'Andmed:',
 	'ed.mapBy': 'Kaart ©',
 	'ed.build': 'järk',
