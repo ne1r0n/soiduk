@@ -4,6 +4,8 @@
  * produced by scripts/build-gtfs.mjs.
  */
 
+import { getOrCreate } from './util.ts';
+
 export interface RawGtfs {
 	patterns: { r: string; m?: 'bus' | 'trol' | 'tram'; h: string; s: string[]; o: number[] }[];
 	/** [patternIdx, startSec, serviceIdx] */
@@ -33,20 +35,13 @@ export function buildIndex(raw: RawGtfs): GtfsIndex {
 	const routesByStop = new Map<string, Set<string>>();
 	raw.patterns.forEach((pat, p) => {
 		pat.s.forEach((code, i) => {
-			let rs = routesByStop.get(code);
-			if (!rs) routesByStop.set(code, (rs = new Set()));
-			rs.add(pat.r);
-			const k = `${pat.r}|${code}`;
-			let a = byRouteStop.get(k);
-			if (!a) byRouteStop.set(k, (a = []));
-			a.push({ p, i });
+			getOrCreate(routesByStop, code, () => new Set<string>()).add(pat.r);
+			getOrCreate(byRouteStop, `${pat.r}|${code}`, () => []).push({ p, i });
 		});
 	});
 	const tripsByPattern = new Map<number, [number, number][]>();
 	for (const [p, start, svc] of raw.trips) {
-		const a = tripsByPattern.get(p);
-		if (a) a.push([start, svc]);
-		else tripsByPattern.set(p, [[start, svc]]);
+		getOrCreate(tripsByPattern, p, () => []).push([start, svc]);
 	}
 	return { raw, byRouteStop, tripsByPattern, routesByStop };
 }

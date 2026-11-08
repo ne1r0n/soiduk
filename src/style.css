@@ -684,10 +684,13 @@ input:focus {
 	border-color: var(--line);
 }
 .leaflet-control-attribution {
+	/* biome-ignore lint/complexity/noImportantStyles: overrides Leaflet's own stylesheet */
 	background: rgba(11, 15, 25, 0.7) !important;
+	/* biome-ignore lint/complexity/noImportantStyles: overrides Leaflet's own stylesheet */
 	color: var(--muted) !important;
 }
 .leaflet-control-attribution a {
+	/* biome-ignore lint/complexity/noImportantStyles: overrides Leaflet's own stylesheet */
 	color: var(--muted) !important;
 }
 .leaflet-tile-pane {

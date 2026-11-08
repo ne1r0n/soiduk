@@ -8,6 +8,7 @@
 какой транспорт приедет и через сколько минут нужно выйти.
 
 [![Открыть](https://img.shields.io/badge/открыть-ne1r0n.github.io%2Fsoiduk-5eead4?style=for-the-badge&labelColor=0b0f19)](https://ne1r0n.github.io/soiduk/)
+[![CI](https://img.shields.io/github/actions/workflow/status/ne1r0n/soiduk/ci.yml?style=for-the-badge&label=ci&labelColor=0b0f19)](https://github.com/ne1r0n/soiduk/actions/workflows/ci.yml)
 [![Deploy](https://img.shields.io/github/actions/workflow/status/ne1r0n/soiduk/pages.yml?style=for-the-badge&label=сборка&labelColor=0b0f19)](https://github.com/ne1r0n/soiduk/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-fbbf24?style=for-the-badge&labelColor=0b0f19)](LICENSE)
 
@@ -49,15 +50,17 @@
 
 ## Запуск у себя
 
-Нужен Node.js 22 или новее.
+Нужен Node.js 24 или новее (версия указана в `.nvmrc`).
 
 ```bash
 npm install
 npm run setup   # скачать остановки и расписание (public/stops.json, public/gtfs.json)
 npm run dev     # http://localhost:5173
-npm test        # тесты
+npm run check   # линтер, форматирование, типы и тесты
 npm run build   # статическая сборка в dist/
 ```
+
+Подробнее о разработке (линтер, хуки, соглашения) в [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Версия берётся из `package.json` (`npm version patch` поднимает её) и показывается внизу экрана настроек вместе с коммитом и датой сборки.
 

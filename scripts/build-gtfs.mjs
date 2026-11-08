@@ -46,7 +46,7 @@ function csv(text) {
 	const head = rows.shift();
 	return rows.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i]])));
 }
-const read = async (n) => csv(await readFile(join(dir, n + '.txt'), 'utf8'));
+const read = async (n) => csv(await readFile(join(dir, `${n}.txt`), 'utf8'));
 const sec = (t) => {
 	const [h, m, s] = t.split(':').map(Number);
 	return h * 3600 + m * 60 + s;
@@ -66,9 +66,9 @@ const trips = new Map((await read('trips')).map((t) => [t.trip_id, t]));
 
 const byTrip = new Map();
 for (const st of await read('stop_times')) {
-	let a = byTrip.get(st.trip_id);
-	if (!a) byTrip.set(st.trip_id, (a = []));
+	const a = byTrip.get(st.trip_id) ?? [];
 	a.push(st);
+	byTrip.set(st.trip_id, a);
 }
 
 const services = [];

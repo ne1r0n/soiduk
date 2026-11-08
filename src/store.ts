@@ -20,43 +20,61 @@ export function save(cfg: Config): void {
 	localStorage.setItem(KEY, JSON.stringify(cfg));
 }
 
+type Obj = Record<string, unknown>;
+const obj = (v: unknown): Obj => (v && typeof v === 'object' ? (v as Obj) : {});
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+/** a finite number, or undefined for null/garbage */
+const num = (v: unknown): number | undefined =>
+	v != null && Number.isFinite(Number(v)) ? Number(v) : undefined;
+const str = (v: unknown): string | undefined => (v ? String(v) : undefined);
+
 export function sanitize(x: unknown): Config {
-	const locs = (x as Config)?.locations;
+	const locs = obj(x).locations;
 	if (!Array.isArray(locs)) throw new Error('Неверный формат конфигурации');
 	return {
-		locations: locs.map((l, i) => ({
-			id: String(l.id ?? `loc${i}`),
-			name: String(l.name ?? 'Локация'),
-			walkMin: Math.max(0, Number(l.walkMin) || 0),
-			stops: (Array.isArray(l.stops) ? l.stops : [])
-				.map((s: any) => ({
-					siriId: Number(s.siriId),
-					name: String(s.name ?? ''),
-					code: s.code ? String(s.code) : undefined,
-					walkMin:
-						Number.isFinite(Number(s.walkMin)) && s.walkMin != null
-							? Math.max(0, Number(s.walkMin))
-							: Math.max(0, Number(l.walkMin) || 0),
-					label: s.label ? String(s.label) : undefined,
-					routes: Array.isArray(s.routes) ? s.routes.map(String) : [],
-					la: Number.isFinite(Number(s.la)) && s.la != null ? Number(s.la) : undefined,
-					lo: Number.isFinite(Number(s.lo)) && s.lo != null ? Number(s.lo) : undefined,
-					area: s.area ? String(s.area) : undefined,
-					nb: Array.isArray(s.nb) ? s.nb.map(String) : undefined,
-				}))
-				.filter((s: { siriId: number }) => Number.isFinite(s.siriId)),
-			goals: (Array.isArray(l.goals) ? l.goals : []).map((g: any, j: number) => ({
-				id: String(g.id ?? `g${i}_${j}`),
-				name: String(g.name ?? 'Цель'),
-				stops: (Array.isArray(g.stops) ? g.stops : [])
-					.map((x: any) => ({
-						code: String(x.code),
-						name: String(x.name ?? ''),
-						pref: x.pref ? true : undefined,
-					}))
-					.filter((x: { code: string }) => x.code),
-			})),
-		})),
+		locations: locs.map((raw, i) => {
+			const l = obj(raw);
+			const walkMin = Math.max(0, Number(l.walkMin) || 0);
+			return {
+				id: String(l.id ?? `loc${i}`),
+				name: String(l.name ?? 'Локация'),
+				walkMin,
+				stops: arr(l.stops)
+					.map((raw) => {
+						const s = obj(raw);
+						return {
+							siriId: Number(s.siriId),
+							name: String(s.name ?? ''),
+							code: str(s.code),
+							walkMin: Math.max(0, num(s.walkMin) ?? walkMin),
+							label: str(s.label),
+							routes: arr(s.routes).map(String),
+							la: num(s.la),
+							lo: num(s.lo),
+							area: str(s.area),
+							nb: Array.isArray(s.nb) ? s.nb.map(String) : undefined,
+						};
+					})
+					.filter((s) => Number.isFinite(s.siriId)),
+				goals: arr(l.goals).map((raw, j) => {
+					const g = obj(raw);
+					return {
+						id: String(g.id ?? `g${i}_${j}`),
+						name: String(g.name ?? 'Цель'),
+						stops: arr(g.stops)
+							.map((raw) => {
+								const x = obj(raw);
+								return {
+									code: String(x.code),
+									name: String(x.name ?? ''),
+									pref: x.pref ? true : undefined,
+								};
+							})
+							.filter((x) => x.code),
+					};
+				}),
+			};
+		}),
 	};
 }
 
@@ -84,7 +102,7 @@ export function loadPrev(): Config | null {
 	try {
 		const raw = localStorage.getItem(PREV_KEY);
 		const c = raw ? sanitize(JSON.parse(raw)) : null;
-		return c && c.locations.length ? c : null;
+		return c?.locations.length ? c : null;
 	} catch {
 		return null;
 	}

@@ -36,8 +36,8 @@ async function pipe(
 
 export async function encodeConfig(cfg: Config): Promise<string> {
 	const bytes = new TextEncoder().encode(JSON.stringify(slim(cfg)));
-	if (typeof CompressionStream === 'undefined') return 'j.' + b64(bytes);
-	return 'z.' + b64(await pipe(bytes, new CompressionStream('deflate-raw')));
+	if (typeof CompressionStream === 'undefined') return `j.${b64(bytes)}`;
+	return `z.${b64(await pipe(bytes, new CompressionStream('deflate-raw')))}`;
 }
 
 export async function decodeConfig(token: string): Promise<Config> {

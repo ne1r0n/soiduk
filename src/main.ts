@@ -13,7 +13,7 @@ import {
 	type StopCfg,
 } from './plan.ts';
 import { decodeConfig, encodeConfig, slim } from './share.ts';
-import { loadStops, type StopInfo } from './stops.ts';
+import { loadStops } from './stops.ts';
 import {
 	type Config,
 	load,
@@ -93,7 +93,7 @@ let gtfsPromise: Promise<void> | null = null;
 function ensureGtfs(): Promise<void> {
 	if (gtfsPromise) return gtfsPromise;
 	gtfsState = 'loading';
-	return (gtfsPromise = fetch(`${import.meta.env.BASE_URL}gtfs.json`)
+	gtfsPromise = fetch(`${import.meta.env.BASE_URL}gtfs.json`)
 		.then((r) => {
 			if (!r.ok) throw new Error(String(r.status));
 			return r.json();
@@ -107,7 +107,8 @@ function ensureGtfs(): Promise<void> {
 		.catch(() => {
 			gtfsState = 'error';
 			render();
-		}));
+		});
+	return gtfsPromise;
 }
 /** undefined = show all departures */
 function selectedGoal(loc: LocationCfg): GoalCfg | undefined {
@@ -181,9 +182,9 @@ async function refresh() {
 }
 
 function routeSort(a: string, b: string) {
-	const na = parseInt(a),
-		nb = parseInt(b);
-	if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+	const na = parseInt(a, 10),
+		nb = parseInt(b, 10);
+	if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
 	return a.localeCompare(b, undefined, { numeric: true });
 }
 
@@ -605,7 +606,7 @@ async function onClick(e: MouseEvent) {
 			break;
 		case 'add-goal':
 			if (loc) {
-				(loc.goals ??= []).push({ id: uid(), name: 'Новая цель', stops: [] });
+				loc.goals = [...(loc.goals ?? []), { id: uid(), name: 'Новая цель', stops: [] }];
 				persist();
 			}
 			break;
@@ -754,7 +755,7 @@ if ('serviceWorker' in navigator)
 
 async function closeNotice() {
 	const reg = await navigator.serviceWorker?.getRegistration();
-	(await reg?.getNotifications({ tag: 'soiduk-watch' }))?.forEach((n) => n.close());
+	for (const n of (await reg?.getNotifications({ tag: 'soiduk-watch' })) ?? []) n.close();
 }
 
 function stopWatch() {
