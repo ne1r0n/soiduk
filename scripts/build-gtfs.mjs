@@ -210,7 +210,8 @@ const pat = patterns.map((p, n) => {
 		shapeIdx.set(id, shapes.length);
 		shapes.push(encode(sp));
 	}
-	// where each stop sits along the shape: nearest point, never going backwards
+	// where each stop sits along the shape: its projection onto the line (segment index + fraction),
+	// never going backwards
 	const sp = simplified.get(id);
 	let from = 0;
 	const at = p.s.map((code) => {
@@ -218,15 +219,23 @@ const pat = patterns.map((p, n) => {
 		if (!ll) return from;
 		let best = from,
 			bd = Infinity;
-		for (let k = from; k < sp.length; k++) {
-			const d = Math.hypot((sp[k][1] - ll[1]) * KLON, sp[k][0] - ll[0]);
+		for (let k = Math.floor(from); k < sp.length - 1; k++) {
+			const ax = sp[k][1] * KLON,
+				ay = sp[k][0],
+				dx = sp[k + 1][1] * KLON - ax,
+				dy = sp[k + 1][0] - ay,
+				len = dx * dx + dy * dy;
+			let t = len ? ((ll[1] * KLON - ax) * dx + (ll[0] - ay) * dy) / len : 0;
+			t = Math.max(0, Math.min(1, t));
+			if (k + t < from) t = from - k;
+			const d = Math.hypot(ll[1] * KLON - (ax + t * dx), ll[0] - (ay + t * dy));
 			if (d < bd) {
 				bd = d;
-				best = k;
+				best = k + t;
 			}
 		}
 		from = best;
-		return best;
+		return Math.round(best * 100) / 100;
 	});
 	return [shapeIdx.get(id), at];
 });

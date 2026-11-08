@@ -28,8 +28,13 @@ export interface Transfer {
 	/** scheduled arrival at the goal stop */
 	sec: number;
 	/** where the legs are in the timetable: pattern, boarding index, alighting index – for both rides */
-	legs: [{ p: number; i: number; j: number }, { p: number; i: number; j: number }];
+	legs: [{ p: number; i: number; j: number }, { p: number; i: number; j: number } | null];
+	/** no second vehicle: from `viaCode` the goal stop `toCode` is reached on foot (`walkSec`) */
+	walkOnly?: boolean;
 }
+
+/** if walking from the first vehicle to the goal costs at most this much more than the second ride, walk */
+export const WALK_SLACK_SEC = 180;
 
 /** minimum time to change vehicles at the same stop / after a walk */
 export const MIN_CHANGE_SEC = 120;
@@ -102,6 +107,7 @@ export function findTransfer(
 		{ date: tallinnDate(now, 1), off: -86400 },
 	];
 	let best: Transfer | null = null;
+	let bestWalk: Transfer | null = null;
 	for (const { date, t } of first) {
 		for (const { p, i } of cands) {
 			const pat = idx.raw.patterns[p];
@@ -116,6 +122,25 @@ export function findTransfer(
 				const via = pat.s[k];
 				if (!viaOk(via)) continue;
 				const options: Near[] = [{ code: via, walkSec: 0 }, ...near(via)];
+				// a goal stop within walking distance: no need to change for the sake of one more stop
+				for (const o of options) {
+					if (o.walkSec === 0 || !goalCodes.has(o.code)) continue;
+					const sec = arrive + o.walkSec;
+					if (bestWalk && sec >= bestWalk.sec) continue;
+					bestWalk = {
+						viaCode: via,
+						boardCode: o.code,
+						walkSec: o.walkSec,
+						route: '',
+						mode: 'bus',
+						headsign: '',
+						depSec: sec,
+						toCode: o.code,
+						sec,
+						legs: [{ p, i, j: k }, null],
+						walkOnly: true,
+					};
+				}
 				for (const { code, walkSec } of options) {
 					const ready = arrive + walkSec + (walkSec ? MIN_CHANGE_AFTER_WALK_SEC : MIN_CHANGE_SEC);
 					for (const f of feed.get(code) ?? []) {
@@ -148,9 +173,12 @@ export function findTransfer(
 				}
 			}
 		}
-		if (best) break;
+		if (best || bestWalk) break;
 	}
-	return best;
+	const ride = best as Transfer | null;
+	const walk = bestWalk as Transfer | null;
+	if (walk && (!ride || walk.sec <= ride.sec + WALK_SLACK_SEC)) return walk;
+	return ride;
 }
 
 /** builds the «stops within walking distance» lookup from stop coordinates (grid of ~0.003° cells) */

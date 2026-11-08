@@ -19,6 +19,8 @@ export interface Journey {
 	legs: Leg[];
 	/** the second ride starts at a neighbouring stop: walk from the last stop of leg 1 to the first of leg 2 */
 	walkSec: number;
+	/** the connection ends on foot: the goal stop to walk to from the last stop of the only ride */
+	walkTo?: string;
 }
 
 const leg = (idx: GtfsIndex, p: number, i: number, j?: number): Leg => {
@@ -57,11 +59,12 @@ export function journeyOf(
 				preferred,
 			);
 			if (!x) return null;
+			const [a, b] = x.legs;
+			if (!b) {
+				return { legs: [leg(idx, a.p, a.i, a.j)], walkSec: x.walkSec, walkTo: x.toCode };
+			}
 			return {
-				legs: [
-					leg(idx, x.legs[0].p, x.legs[0].i, x.legs[0].j),
-					leg(idx, x.legs[1].p, x.legs[1].i, x.legs[1].j),
-				],
+				legs: [leg(idx, a.p, a.i, a.j), leg(idx, b.p, b.i, b.j)],
 				walkSec: x.walkSec,
 			};
 		}

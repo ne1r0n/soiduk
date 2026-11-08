@@ -103,3 +103,20 @@ test('a change that leads away from the goal is skipped (viaOk)', () => {
 	);
 	assert.equal(r, null);
 });
+
+test('a goal stop within walking distance of the first ride: walk instead of changing', () => {
+	const nearGoal = (c: string) => (c === 'Y' ? [{ code: 'GOAL', walkSec: 200 }] : []);
+	const r = findTransfer(idx, '10', 'HOME', 12 * H, 0, goal, nearGoal, NOW);
+	assert.equal(r?.walkOnly, true);
+	assert.equal(r?.viaCode, 'Y');
+	assert.equal(r?.toCode, 'GOAL');
+	assert.equal(r?.sec, 12 * H + 20 * 60 + 200);
+	assert.equal(r?.legs[1], null);
+});
+
+test('a long walk loses to the second ride', () => {
+	const farGoal = (c: string) => (c === 'Y' ? [{ code: 'GOAL', walkSec: 1200 }] : []);
+	const r = findTransfer(idx, '10', 'HOME', 12 * H, 0, goal, farGoal, NOW);
+	assert.equal(r?.route, '30');
+	assert.equal(r?.walkOnly, undefined);
+});

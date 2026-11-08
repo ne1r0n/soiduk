@@ -3,7 +3,7 @@
 interface RawShapes {
 	/** per shape: delta-encoded [lat, lon, dlat, dlon, …] in 1e-5 degrees */
 	shapes: number[][];
-	/** per pattern: [shape index, index of each stop's nearest shape point] */
+	/** per pattern: [shape index, position of each stop along the shape: point index + fraction] */
 	pat: ([number, number[]] | null)[];
 }
 
@@ -46,6 +46,16 @@ export function roadBetween(
 ): [number, number][] | undefined {
 	const e = s?.pat[p];
 	if (!s || !e) return undefined;
-	const line = s.pts[e[0]].slice(e[1][i], e[1][j] + 1);
+	const pts = s.pts[e[0]];
+	const [a, b] = [e[1][i], e[1][j]];
+	const at = (x: number): [number, number] => {
+		const k = Math.floor(x);
+		const t = x - k;
+		const p = pts[k];
+		const q = pts[k + 1];
+		return q && t ? [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t] : p;
+	};
+	// the exact start, the corners of the road in between, the exact end
+	const line = [at(a), ...pts.slice(Math.floor(a) + 1, Math.floor(b) + 1), at(b)];
 	return line.length > 1 ? line : undefined;
 }

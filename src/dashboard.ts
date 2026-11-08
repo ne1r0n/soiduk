@@ -40,6 +40,8 @@ function delayTag(sec: number) {
 /** second line of a trip with a change: «⇄ Kopli · 🚶 2 мин → [33] 14:05» */
 function viaLine(v: NonNullable<NonNullable<Row['arrive']>['via']>): string {
 	const walk = v.walkSec ? ` · 🚶 ${Math.max(1, Math.round(v.walkSec / 60))} ${t('unit.min')}` : '';
+	if (v.walk)
+		return `<span class="via" title="${t('card.change')}">⇄ ${esc(v.stopName)}${walk}</span>`;
 	return `<span class="via" title="${t('card.change')}">⇄ ${esc(v.stopName)}${walk} → <span class="badge mini ${modeClass[v.mode]}">${esc(v.route)}</span> ${fmtClock(v.depSec)}</span>`;
 }
 

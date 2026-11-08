@@ -62,6 +62,8 @@ export interface Row {
 			mode: 'bus' | 'trol' | 'tram';
 			depSec: number;
 			walkSec: number;
+			/** no second vehicle: the goal is reached on foot from here */
+			walk?: boolean;
 		};
 	};
 }
@@ -176,6 +178,7 @@ export function buildRows(
 							mode: x.mode,
 							depSec: x.depSec,
 							walkSec: x.walkSec,
+							walk: x.walkOnly,
 						},
 					};
 				} else continue; // this trip never reaches the goal

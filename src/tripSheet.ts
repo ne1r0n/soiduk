@@ -54,9 +54,11 @@ function steps(row: Row, j: Journey | null): string {
 		const walk = j.walkSec
 			? `<span class="muted">🚶 ${Math.max(1, Math.round(j.walkSec / 60))} ${t('unit.min')}</span>`
 			: '';
-		out.push(
-			line(fmtClock(v.depSec), v.stopName, `${walk}${count(j.legs[1])}${badge(v.route, v.mode)}`),
-		);
+		if (v.walk) out.push(line(fmtClock(v.depSec - v.walkSec), v.stopName, walk));
+		else
+			out.push(
+				line(fmtClock(v.depSec), v.stopName, `${walk}${count(j.legs[1])}${badge(v.route, v.mode)}`),
+			);
 	}
 	if (row.arrive) out.push(line(fmtClock(row.arrive.sec), row.arrive.stopName));
 	return `<ol class="tp-steps">${out.join('')}</ol>`;
@@ -139,7 +141,7 @@ function draw(
 		prevEnd = line[line.length - 1];
 	});
 	const first = j.legs[0].codes[0];
-	const last = j.legs[j.legs.length - 1].codes.at(-1);
+	const last = j.walkTo ?? j.legs[j.legs.length - 1].codes.at(-1);
 	if (first) dot(first, cssVar('--ok'), true);
 	if (j.legs.length > 1) {
 		// crossing the street: two stops of the same name – both are drawn, but labelled once
@@ -148,6 +150,17 @@ function draw(
 		const same = stopNameByCode(board) === stopNameByCode(alight);
 		dot(alight, '#e2e8f0', false, same ? 'top' : 'left');
 		dot(board, '#e2e8f0', false, 'right', !same);
+	}
+	if (j.walkTo) {
+		// the connection ends on foot: dashed line from the last stop of the ride to the goal
+		const alight = j.legs[0].codes.at(-1) ?? '';
+		const a = at(alight);
+		const g = at(j.walkTo);
+		if (a && g) {
+			L.polyline([a, g], { color: '#94a3b8', weight: 3, dashArray: '2 7' }).addTo(m);
+			pts.push(g);
+		}
+		dot(alight, '#e2e8f0', false, 'left');
 	}
 	if (last) dot(last, cssVar('--soon'), true, j.legs.length > 1 ? 'right' : 'top');
 	const fit = () => {
