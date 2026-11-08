@@ -49,7 +49,7 @@ function steps(row: Row, j: Journey | null): string {
 	return `<ol class="tp-steps">${out.join('')}</ol>`;
 }
 
-function draw(el: HTMLElement, j: Journey) {
+function draw(el: HTMLElement, j: Journey): { m: L.Map; fit: () => void } {
 	const m = L.map(el, { zoomControl: false, attributionControl: true });
 	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,
@@ -100,17 +100,17 @@ function draw(el: HTMLElement, j: Journey) {
 	if (first) dot(first, cssVar('--ok'), true);
 	if (j.legs.length > 1) {
 		dot(j.legs[0].codes.at(-1) ?? '', '#e2e8f0', false, 'left');
-		dot(
-			j.legs[1].codes[0],
-			'#e2e8f0',
-			false,
-			'right',
-			stopNameByCode(j.legs[1].codes[0]) !== stopNameByCode(j.legs[0].codes.at(-1) ?? ''),
-		);
+		// the opposite stop of the same name sits a few metres away: one dot is enough, the dashed walk shows the rest
+		const board = j.legs[1].codes[0];
+		if (stopNameByCode(board) !== stopNameByCode(j.legs[0].codes.at(-1) ?? ''))
+			dot(board, '#e2e8f0', false, 'right');
 	}
 	if (last) dot(last, cssVar('--soon'), true, j.legs.length > 1 ? 'right' : 'top');
-	if (pts.length) m.fitBounds(L.latLngBounds(pts), { padding: [28, 28] });
-	return m;
+	const fit = () => {
+		if (pts.length) m.fitBounds(L.latLngBounds(pts), { padding: [28, 28], animate: false });
+	};
+	fit();
+	return { m, fit };
 }
 
 /** bottom sheet for a tapped departure: the route on a mini map, the steps, and the notification switch */
@@ -152,9 +152,13 @@ export async function openTrip(loc: LocationCfg, key: string) {
 	if (j) {
 		const el = document.getElementById('tp-map');
 		if (el) {
-			map = draw(el, j);
-			const m = map;
-			setTimeout(() => m.invalidateSize(), 50);
+			const { m, fit } = draw(el, j);
+			map = m;
+			// the sheet has just been laid out: re-measure, then fit the route into the real size
+			setTimeout(() => {
+				m.invalidateSize();
+				fit();
+			}, 50);
 		}
 	}
 	const bell = root.querySelector<HTMLElement>('.tp-bell');
