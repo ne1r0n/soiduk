@@ -3,6 +3,7 @@ import { stopInfo } from './gtfs.ts';
 import type { GoalCfg, StopCfg } from './plan.ts';
 import { knownRoutes, state } from './state.ts';
 import { loadPrev } from './store.ts';
+import { loadTheme, THEMES } from './theme.ts';
 import { esc, routeSort } from './util.ts';
 
 /** ↑ ↓ buttons; the container (location, stop or goal) is found from the DOM on click */
@@ -72,6 +73,7 @@ function stopEditor(s: StopCfg, index: number, count: number): string {
 }
 
 export function editor(): string {
+	const theme = loadTheme();
 	const locs = state.cfg.locations
 		.map(
 			(l, li, all) => `
@@ -96,6 +98,10 @@ export function editor(): string {
     <main>
       ${locs || '<p class="muted">Добавьте первую локацию – например «Дом» – и выберите остановки рядом.</p>'}
       <button class="btn primary" data-act="add-loc">＋ Локация</button>
+      <div class="sec-title">Оформление</div>
+      <div class="goalbar">
+        ${THEMES.map((t) => `<button type="button" class="gchip ${t.id === theme ? 'on' : ''}" data-act="theme" data-theme-id="${t.id}">${t.label}</button>`).join('')}
+      </div>
       <div class="sec-title">Резервная копия</div>
       <div class="io">
         <button class="btn" data-act="share-link">🔗 Поделиться</button>

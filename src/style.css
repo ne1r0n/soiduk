@@ -1,5 +1,22 @@
-:root {
+:root,
+:root[data-theme="dark"] {
 	--bg: #0b0f19;
+	--bg-glow: #1b2a4a;
+	--field: rgba(0, 0, 0, 0.25);
+	--inset: rgba(0, 0, 0, 0.18);
+	--scrim: rgba(0, 0, 0, 0.55);
+	--on-ok: #05211d;
+	--card-shadow: none;
+	--map-bg: #0b0f19;
+	--map-filter: invert(1) hue-rotate(195deg) brightness(0.85) contrast(0.9) saturate(0.55);
+	--tip-bg: rgba(11, 15, 25, 0.9);
+	--attr-bg: rgba(11, 15, 25, 0.7);
+	--warn: #f2b45a;
+	--warn-tint: rgba(251, 191, 36, 0.08);
+	--warn-line: rgba(251, 191, 36, 0.4);
+	--warn-ring: rgba(251, 191, 36, 0.8);
+	--late-bg: rgba(251, 113, 133, 0.16);
+	--early-bg: rgba(94, 234, 212, 0.14);
 	--bg2: #131a2b;
 	--card: rgba(255, 255, 255, 0.055);
 	--line: rgba(255, 255, 255, 0.09);
@@ -13,6 +30,37 @@
 	--tram: #f472b6;
 	--r: 22px;
 	color-scheme: dark;
+}
+:root[data-theme="light"] {
+	--bg: #f3f5fa;
+	--bg2: #e8ecf4;
+	--bg-glow: #dbe6ff;
+	--card: #ffffff;
+	--line: rgba(15, 23, 42, 0.12);
+	--text: #0f172a;
+	--muted: #5a667c;
+	--ok: #0d9488;
+	--soon: #b45309;
+	--now: #e11d48;
+	--bus: #0369a1;
+	--trol: #047857;
+	--tram: #be185d;
+	--field: rgba(15, 23, 42, 0.05);
+	--inset: rgba(15, 23, 42, 0.04);
+	--scrim: rgba(15, 23, 42, 0.4);
+	--on-ok: #ffffff;
+	--card-shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.05);
+	--map-bg: #e8ecf4;
+	--map-filter: none;
+	--tip-bg: rgba(255, 255, 255, 0.95);
+	--attr-bg: rgba(255, 255, 255, 0.75);
+	--warn: #b45309;
+	--warn-tint: rgba(180, 83, 9, 0.08);
+	--warn-line: rgba(180, 83, 9, 0.4);
+	--warn-ring: rgba(180, 83, 9, 0.8);
+	--late-bg: rgba(225, 29, 72, 0.1);
+	--early-bg: rgba(13, 148, 136, 0.12);
+	color-scheme: light;
 }
 * {
 	box-sizing: border-box;
@@ -31,7 +79,8 @@ body {
 		"Inter",
 		system-ui,
 		sans-serif;
-	background: radial-gradient(1200px 600px at 10% -10%, #1b2a4a 0%, transparent 60%), var(--bg);
+	background:
+		radial-gradient(1200px 600px at 10% -10%, var(--bg-glow) 0%, transparent 60%), var(--bg);
 	min-height: 100vh;
 	padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
 }
@@ -123,7 +172,7 @@ button {
 }
 .btn.primary {
 	background: var(--ok);
-	color: #05211d;
+	color: var(--on-ok);
 	border-color: transparent;
 }
 .btn.ghost {
@@ -141,6 +190,7 @@ button {
 	border-radius: var(--r);
 	padding: 16px 16px 12px;
 	backdrop-filter: blur(14px);
+	box-shadow: var(--card-shadow);
 	--accent: var(--ok);
 }
 .card.soon {
@@ -289,11 +339,11 @@ button {
 	margin-left: 4px;
 }
 .delay.late {
-	background: rgba(251, 113, 133, 0.16);
+	background: var(--late-bg);
 	color: var(--now);
 }
 .delay.early {
-	background: rgba(94, 234, 212, 0.14);
+	background: var(--early-bg);
 	color: var(--ok);
 }
 
@@ -303,7 +353,7 @@ button {
 	gap: 8px;
 }
 input {
-	background: rgba(0, 0, 0, 0.25);
+	background: var(--field);
 	border: 1px solid var(--line);
 	border-radius: 12px;
 	padding: 10px 12px;
@@ -335,7 +385,7 @@ input:focus {
 	margin-bottom: 10px;
 	border: 1px solid var(--line);
 	border-radius: 16px;
-	background: rgba(0, 0, 0, 0.18);
+	background: var(--inset);
 }
 .stop-head {
 	display: flex;
@@ -362,7 +412,7 @@ input:focus {
 }
 .chip.on {
 	background: var(--ok);
-	color: #05211d;
+	color: var(--on-ok);
 	border-color: transparent;
 }
 .hint {
@@ -380,7 +430,7 @@ input:focus {
 .sheet-bg {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.55);
+	background: var(--scrim);
 	z-index: 10;
 }
 .sheet {
@@ -582,7 +632,7 @@ input:focus {
 .pk-bg {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.6);
+	background: var(--scrim);
 	z-index: 1000;
 }
 .pk-sheet {
@@ -615,7 +665,7 @@ input:focus {
 	border-radius: 16px;
 	overflow: hidden;
 	border: 1px solid var(--line);
-	background: #0b0f19;
+	background: var(--map-bg);
 }
 .pk-hint {
 	font-size: 13px;
@@ -629,8 +679,8 @@ input:focus {
 	gap: 10px;
 	padding: 10px 12px;
 	border-radius: 14px;
-	background: rgba(251, 191, 36, 0.08);
-	border: 1px solid rgba(251, 191, 36, 0.4);
+	background: var(--warn-tint);
+	border: 1px solid var(--warn-line);
 }
 .pk-card-main {
 	min-width: 0;
@@ -658,7 +708,7 @@ input:focus {
 	cursor: pointer;
 }
 #pk-list li.sel {
-	background: rgba(251, 191, 36, 0.08);
+	background: var(--warn-tint);
 }
 #pk-list li.muted {
 	cursor: default;
@@ -677,11 +727,11 @@ input:focus {
 	font-size: 13px;
 }
 .leaflet-container {
-	background: #0b0f19;
+	background: var(--map-bg);
 	font: inherit;
 }
 .leaflet-tooltip.pk-tip {
-	background: rgba(11, 15, 25, 0.9);
+	background: var(--tip-bg);
 	color: var(--text);
 	border: 1px solid var(--line);
 	box-shadow: none;
@@ -690,7 +740,7 @@ input:focus {
 	padding: 2px 6px;
 }
 .leaflet-tooltip-top.pk-tip::before {
-	border-top-color: rgba(11, 15, 25, 0.9);
+	border-top-color: var(--tip-bg);
 }
 .leaflet-bar a {
 	background: var(--bg2);
@@ -699,7 +749,7 @@ input:focus {
 }
 .leaflet-control-attribution {
 	/* biome-ignore lint/complexity/noImportantStyles: overrides Leaflet's own stylesheet */
-	background: rgba(11, 15, 25, 0.7) !important;
+	background: var(--attr-bg) !important;
 	/* biome-ignore lint/complexity/noImportantStyles: overrides Leaflet's own stylesheet */
 	color: var(--muted) !important;
 }
@@ -708,7 +758,7 @@ input:focus {
 	color: var(--muted) !important;
 }
 .leaflet-tile-pane {
-	filter: invert(1) hue-rotate(195deg) brightness(0.85) contrast(0.9) saturate(0.55);
+	filter: var(--map-filter);
 }
 
 /* location = group of stop cards */
@@ -754,7 +804,7 @@ main {
 	color: inherit;
 }
 .goal-stop.pref {
-	box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.8);
+	box-shadow: 0 0 0 2px var(--warn-ring);
 }
 
 /* first row of a card is the highlighted one; all rows share one layout */
@@ -880,5 +930,5 @@ main {
 	font-size: 13px;
 }
 .head-right .dirs.plan {
-	color: #f2b45a;
+	color: var(--warn);
 }

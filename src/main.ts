@@ -8,10 +8,12 @@ import { registerServiceWorker, updateWatch } from './notify.ts';
 import { renderApp } from './render.ts';
 import { decodeConfig } from './share.ts';
 import { render, setRenderer, state } from './state.ts';
+import { initTheme } from './theme.ts';
 import { byId } from './util.ts';
 
 const REFRESH_MS = 20_000;
 
+initTheme();
 setRenderer(renderApp);
 setAfterRefresh(updateWatch);
 bindActions(byId('app'), byId('live'));

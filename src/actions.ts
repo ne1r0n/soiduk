@@ -7,6 +7,7 @@ import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
 import { persist, render, state } from './state.ts';
 import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
+import { setTheme, type ThemePref } from './theme.ts';
 import { moveItem } from './util.ts';
 
 const findLoc = (el: Element) =>
@@ -106,6 +107,10 @@ async function onClick(e: MouseEvent) {
 				goals: [],
 			});
 			persist();
+			break;
+		case 'theme':
+			setTheme(t.dataset.themeId as ThemePref);
+			render();
 			break;
 		case 'move-up':
 			moveEntry(t, -1);
