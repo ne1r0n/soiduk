@@ -6,6 +6,7 @@ import { type Journey, journeyOf } from './journey.ts';
 import { toggleWatch } from './notify.ts';
 import { fmtClock, fmtMinutes, type LocationCfg, type Row } from './plan.ts';
 import { locationRows } from './rows.ts';
+import { loadShapes, roadBetween } from './shapes.ts';
 import { selectedGoal, state } from './state.ts';
 import { loadStops } from './stops.ts';
 import { esc } from './util.ts';
@@ -49,7 +50,11 @@ function steps(row: Row, j: Journey | null): string {
 	return `<ol class="tp-steps">${out.join('')}</ol>`;
 }
 
-function draw(el: HTMLElement, j: Journey): { m: L.Map; fit: () => void } {
+function draw(
+	el: HTMLElement,
+	j: Journey,
+	shapes: Awaited<ReturnType<typeof loadShapes>>,
+): { m: L.Map; fit: () => void } {
 	const m = L.map(el, { zoomControl: false, attributionControl: true });
 	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 		maxZoom: 19,
@@ -86,7 +91,10 @@ function draw(el: HTMLElement, j: Journey): { m: L.Map; fit: () => void } {
 	};
 	let prevEnd: [number, number] | undefined;
 	j.legs.forEach((leg, n) => {
-		const line = leg.codes.map(at).filter((p): p is [number, number] => !!p);
+		// the real road when the geometry is there, otherwise straight lines between stops
+		const line =
+			roadBetween(shapes, leg.p, leg.i, leg.j) ??
+			leg.codes.map(at).filter((p): p is [number, number] => !!p);
 		if (!line.length) return;
 		const color = cssVar(`--${leg.mode}`);
 		if (prevEnd)
@@ -129,6 +137,7 @@ export async function openTrip(loc: LocationCfg, key: string) {
 	await ensureGtfs();
 	ensureGeo();
 	await loadStops().catch(() => []);
+	const shapes = await loadShapes();
 	const elapsed = state.fetchedAt ? (Date.now() - state.fetchedAt) / 1000 : 0;
 	const row = locationRows(loc, goal, elapsed).find((r) => rowKey(r) === key);
 	if (!row) return;
@@ -159,7 +168,7 @@ export async function openTrip(loc: LocationCfg, key: string) {
 	if (j) {
 		const el = document.getElementById('tp-map');
 		if (el) {
-			const { m, fit } = draw(el, j);
+			const { m, fit } = draw(el, j, shapes);
 			map = m;
 			// the sheet has just been laid out: re-measure, then fit the route into the real size
 			setTimeout(() => {

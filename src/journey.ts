@@ -9,6 +9,10 @@ export interface Leg {
 	mode: 'bus' | 'trol' | 'tram';
 	/** stop codes from boarding to alighting */
 	codes: string[];
+	/** the ride in the timetable: pattern, boarding index, alighting index */
+	p: number;
+	i: number;
+	j: number;
 }
 
 export interface Journey {
@@ -19,7 +23,8 @@ export interface Journey {
 
 const leg = (idx: GtfsIndex, p: number, i: number, j?: number): Leg => {
 	const pat = idx.raw.patterns[p];
-	return { route: pat.r, mode: pat.m ?? 'bus', codes: pat.s.slice(i, (j ?? pat.s.length - 1) + 1) };
+	const to = j ?? pat.s.length - 1;
+	return { route: pat.r, mode: pat.m ?? 'bus', codes: pat.s.slice(i, to + 1), p, i, j: to };
 };
 
 /**
