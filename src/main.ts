@@ -6,6 +6,7 @@ import { decodeConfig, encodeConfig, slim } from './share.ts';
 import { KOFI_URL } from './config.ts';
 import { loadStops, type StopInfo } from './stops.ts';
 import { buildIndex, type GtfsIndex } from './trip.ts';
+import { loadWatch, pickRow, rowKey, saveWatch, watchNotice, WATCH_TTL_MS, type Watch } from './watch.ts';
 import { closePicker, openPicker, refreshPicker } from './picker.ts';
 
 const REFRESH_MS = 20_000;
@@ -100,6 +101,7 @@ async function refresh() {
   lastOk = bad.size < Math.max(ids.length, 1);
   updateLive();
   render();
+  updateWatch();
 }
 
 function routeSort(a: string, b: string) {
@@ -157,9 +159,9 @@ function stopCard(loc: LocationCfg, stop: StopCfg, goal: GoalCfg | undefined, id
 
   const lvl = urgency(rows[0].leaveInSec);
   const list = rows.slice(0, 1 + MAX_EXTRA_ROWS).map(r => `
-    <li>
+    <li${goal ? ` data-act="pin" data-key="${rowKey(r)}" class="pinnable"` : ''}>
       ${badge(r)}
-      <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="Прибытие">(${fmtClock(r.arrive.sec)})</span>` : ''}</span>
+      <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="Прибытие">(${fmtClock(r.arrive.sec)})</span>` : ''}${watch?.pin === rowKey(r) ? '<span class="pin" title="Слежу за этим рейсом">🔔</span>' : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
       <span class="in">${leaveText(r.leaveInSec)}</span>
     </li>`).join('');
@@ -173,6 +175,7 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
   const bar = goals.length ? `<div class="goalbar">
       <button class="gchip ${goal ? '' : 'on'}" data-act="select-goal" data-gid="">Все</button>
       ${goals.map(g => `<button class="gchip ${goal?.id === g.id ? 'on' : ''}" data-act="select-goal" data-gid="${g.id}">→ ${esc(g.name)}</button>`).join('')}
+      ${goal ? `<button class="gchip bell ${watch?.locId === loc.id && watch.goalId === goal.id ? 'on' : ''}" data-act="watch">${watch?.locId === loc.id && watch.goalId === goal.id ? '🔔 Слежу' : '🔔 Напомнить'}</button>` : ''}
     </div>` : '';
   const head = `<div class="loc-head"><h3>${esc(loc.name)}</h3>${bar}</div>`;
   const wrap = (inner: string) => `<section class="loc" data-loc="${loc.id}">${head}${inner}</section>`;
@@ -366,6 +369,8 @@ async function onClick(e: MouseEvent) {
     case 'edit': view = 'edit'; render(); updateLive(); break;
     case 'done': view = 'dash'; closePicker(); render(); updateLive(); refresh(); break;
     case 'add-loc': cfg.locations.push({ id: uid(), name: cfg.locations.length ? 'Новая локация' : 'Дом', walkMin: 5, stops: [], goals: [] }); persist(); break;
+    case 'watch': if (loc) toggleWatch(loc, undefined); break;
+    case 'pin': if (loc) toggleWatch(loc, t.dataset.key); break;
     case 'select-goal': if (loc) { selection[loc.id] = t.dataset.gid ?? ''; saveSelection(selection); render(); } break;
     case 'add-goal': if (loc) { (loc.goals ??= []).push({ id: uid(), name: 'Новая цель', stops: [] }); persist(); } break;
     case 'del-goal': {
@@ -452,6 +457,69 @@ app.addEventListener('input', e => {
   save(cfg);
 });
 
+// ---------- watch: notification with the next departure to a goal ----------
+let watch: Watch | null = loadWatch();
+let notified = { key: '', shown: false };
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
+
+async function closeNotice() {
+  const reg = await navigator.serviceWorker?.getRegistration();
+  (await reg?.getNotifications({ tag: 'soiduk-watch' }))?.forEach(n => n.close());
+}
+
+function stopWatch() {
+  watch = null; saveWatch(null); notified = { key: '', shown: false };
+  closeNotice().catch(() => {});
+  render();
+}
+
+async function toggleWatch(loc: LocationCfg, pin?: string) {
+  const goal = selectedGoal(loc);
+  if (!goal) return;
+  const same = watch?.locId === loc.id && watch.goalId === goal.id;
+  if (same && (!pin || watch?.pin === pin)) return stopWatch();
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    alert('Этот браузер не умеет показывать уведомления. На iPhone добавьте сайт на экран «Домой» (Поделиться → На экран «Домой») и откройте оттуда.');
+    return;
+  }
+  if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') {
+    alert('Уведомления запрещены. Разрешите их для этого сайта в настройках браузера.');
+    return;
+  }
+  watch = { locId: loc.id, goalId: goal.id, pin, until: Date.now() + WATCH_TTL_MS };
+  saveWatch(watch); notified = { key: '', shown: false };
+  render();
+  updateWatch(true);
+}
+
+async function updateWatch(first = false) {
+  if (!watch) return;
+  if (Date.now() > watch.until) return stopWatch();
+  const loc = cfg.locations.find(l => l.id === watch!.locId);
+  const goal = loc?.goals?.find(g => g.id === watch!.goalId);
+  if (!loc || !goal) return stopWatch();
+  if (!gtfs) { ensureGtfs(); return; }
+  if (!fetchedAt || Notification.permission !== 'granted') return;
+  const elapsed = (Date.now() - fetchedAt) / 1000;
+  const rows = loc.stops.flatMap(s => buildRows({ id: loc.id, name: loc.name, walkMin: s.walkMin ?? loc.walkMin, stops: [s] }, data, elapsed, 30, { goal, idx: gtfs! }))
+    .sort((a, b) => a.leaveInSec - b.leaveInSec);
+  const row = pickRow(rows, watch.pin);
+  if (!row) return;
+  const key = rowKey(row);
+  const reg = await navigator.serviceWorker.ready;
+  const visible = (await reg.getNotifications({ tag: 'soiduk-watch' })).length > 0;
+  // loud only the first time and when it is time to go; the user may have swiped it away – don't nag
+  const alert = (row.leaveInSec < 60 && notified.key !== key) || first;
+  if (!alert && !visible && notified.shown) return;
+  if (row.leaveInSec < 60) notified.key = key;
+  notified.shown = true;
+  const n = watchNotice(row, loc.name);
+  await reg.showNotification(n.title, {
+    body: n.body, tag: 'soiduk-watch', requireInteraction: true,
+    ...(alert ? { renotify: true, vibrate: [200, 100, 200] } : { silent: true }),
+  } as NotificationOptions);
+}
+
 // ---------- live indicator (lives outside #app so animations never restart) ----------
 function updateLive() {
   liveEl.hidden = view !== 'dash' || !cfg.locations.length;
@@ -467,7 +535,7 @@ function updateLive() {
 
 // ---------- loop ----------
 setInterval(() => { if (view === 'dash') render(); updateLive(); }, 1000);
-setInterval(() => { if (!document.hidden) refresh(); }, REFRESH_MS);
+setInterval(() => { if (!document.hidden || watch) refresh(); }, REFRESH_MS);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 // fill in position / area / code for stops saved without them (older versions, shared links)
 function backfill() {
@@ -496,3 +564,4 @@ if (shared) {
 render();
 updateLive();
 refresh();
+if (watch) ensureGtfs();
