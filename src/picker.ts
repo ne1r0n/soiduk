@@ -12,7 +12,7 @@ export interface PickerOpts {
 	/** destinations seen live at a stop (undefined = not loaded yet) */
 	dests: (siri: number) => string[] | undefined;
 	peek: (ids: number[]) => void;
-	/** routes serving a stop (from the timetable), shown when picking a goal */
+	/** routes serving a stop (from the timetable) */
 	routesAt?: (code: string) => string[] | undefined;
 	onPick: (s: StopInfo) => void;
 }
@@ -162,12 +162,13 @@ function dirHtml(s: StopInfo): string {
 			? `<span class="dirs">${t('pk.routes')}${r.slice(0, 8).map(esc).join(' · ')}</span>`
 			: '';
 	}
+	const routes = st!.opts.routesAt?.(s.id) ?? [];
 	const d = st!.opts.dests(s.s);
-	return d === undefined
-		? '<span class="muted">…</span>'
-		: d.length
-			? `<span class="dirs">→ ${d.slice(0, 3).map(esc).join(' · ')}</span>`
-			: `<span class="warn">${t('pk.noLive')}</span>`;
+	if (!routes.length && d === undefined) return '<span class="muted">…</span>';
+	if (!routes.length && !d?.length) return `<span class="warn">${t('pk.noLive')}</span>`;
+	const via = routes.slice(0, 8).map(esc).join(' · ');
+	const to = d?.length ? `→ ${d.slice(0, 3).map(esc).join(' · ')}` : '';
+	return `<span class="dirs">${[via, to].filter(Boolean).join(' ')}</span>`;
 }
 
 function renderList() {

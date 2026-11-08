@@ -69,13 +69,16 @@ export async function pickStop(loc: LocationCfg) {
 		goal: false,
 		taken: new Set(loc.stops.map((s) => s.siriId)),
 		center: centroid(loc.stops),
+		// the timetable answers at once; the live feed (loaded lazily) takes over when it has something
 		dests: (id) => {
 			const live = knownDests.get(id);
+			if (live?.length) return live;
 			const code = codeBySiri.get(id);
-			return live && !live.length && state.gtfs && code
-				? stopOverview(state.gtfs, code).dests
-				: live;
+			const planned = code && state.gtfs ? stopOverview(state.gtfs, code).dests : [];
+			return planned.length ? planned : live;
 		},
+		routesAt: (code) =>
+			state.gtfs ? stopOverview(state.gtfs, code).routes.sort(routeSort) : undefined,
 		peek,
 		onPick: (info) => {
 			loc.stops.push({
