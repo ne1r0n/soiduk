@@ -87,3 +87,19 @@ test('dropRedundantChanges keeps the latest first vehicle per second vehicle', (
 		[20, 30],
 	);
 });
+
+test('a change that leads away from the goal is skipped (viaOk)', () => {
+	const r = findTransfer(
+		idx,
+		'10',
+		'HOME',
+		12 * H,
+		0,
+		goal,
+		noNear,
+		NOW,
+		undefined,
+		(c) => c !== 'Y',
+	);
+	assert.equal(r, null);
+});

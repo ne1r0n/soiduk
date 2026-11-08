@@ -32,9 +32,11 @@ export function watchNotice(r: Row, locName: string): { title: string; body: str
 	// arrival is only known when a goal was selected
 	const to = ` → ${r.arrive ? r.arrive.stopName : r.dep.dest}`;
 	const arr = r.arrive ? ` · ${t('watch.arr')} ${fmtClock(r.arrive.sec)}` : '';
+	const v = r.arrive?.via;
+	const change = v ? `\n⇄ ${v.stopName} → ${v.route} ${fmtClock(v.depSec)}` : '';
 	return {
 		title,
-		body: `${r.dep.route}${to} · ${t('watch.dep')} ${fmtClock(r.dep.expected)}${arr}\n${locName}`,
+		body: `${r.dep.route}${to} · ${t('watch.dep')} ${fmtClock(r.dep.expected)}${arr}${change}\n${locName}`,
 	};
 }
 

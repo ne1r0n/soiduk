@@ -1,5 +1,5 @@
 import type { Mode } from './api.ts';
-import { ensureGeo, nearStops, stopNameByCode } from './geo.ts';
+import { ensureGeo } from './geo.ts';
 import { ensureGtfs, stopInfo } from './gtfs.ts';
 import { t } from './i18n.ts';
 import {
@@ -11,13 +11,13 @@ import {
 	type Row,
 	type StopCfg,
 } from './plan.ts';
+import { XFER } from './rows.ts';
 import { selectedGoal, state } from './state.ts';
 import type { GtfsIndex } from './trip.ts';
 import { esc } from './util.ts';
 import { rowKey } from './watch.ts';
 
 const MAX_EXTRA_ROWS = 3;
-const XFER = { near: nearStops, name: stopNameByCode };
 const modeClass: Record<Mode, string> = { bus: 'bus', trol: 'trol', tram: 'tram', other: 'bus' };
 
 function urgency(leaveSec: number): string {
@@ -109,7 +109,7 @@ function stopCard(
 		.slice(0, 1 + MAX_EXTRA_ROWS)
 		.map(
 			(r) => `
-    <li data-act="pin" data-key="${rowKey(r)}" class="pinnable${r.arrive?.via ? ' xfer' : ''}">
+    <li data-act="trip" data-key="${rowKey(r)}" class="pinnable${r.arrive?.via ? ' xfer' : ''}">
       ${badge(r)}
       <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="${t('card.arrival')}">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? `<span class="pin" title="${t('card.pinned')}">🔔</span>` : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>

@@ -45,6 +45,10 @@ export const en: Record<Key, string> = {
 	'card.change': 'Change',
 	'card.xfer':
 		'No direct routes. Showing options with one change (the second ride is by timetable).',
+	'trip.notify': 'Notify me when to leave',
+	'trip.notifyOff': 'Stop notifying',
+	'trip.close': 'Close',
+	'trip.noMap': 'Route not found in the timetable',
 	'card.pinned': 'Following this trip',
 	'card.all': 'All',
 	'card.noStops': 'No stops. Add some in settings.',

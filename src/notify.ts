@@ -1,6 +1,7 @@
 import { ensureGtfs } from './gtfs.ts';
 import { t } from './i18n.ts';
-import { buildRows, type LocationCfg } from './plan.ts';
+import type { LocationCfg } from './plan.ts';
+import { locationRows } from './rows.ts';
 import { render, selectedGoal, state } from './state.ts';
 import { pickRow, rowKey, saveWatch, WATCH_TTL_MS, watchNotice } from './watch.ts';
 
@@ -26,7 +27,7 @@ export function stopWatch() {
 	render();
 }
 
-/** tap on a departure: start notifying about it; tapping the pinned one again stops */
+/** start notifying about a departure; asking again for the pinned one stops */
 export async function toggleWatch(loc: LocationCfg, pin: string) {
 	const w = state.watch;
 	if (w?.locId === loc.id && w.pin === pin) return stopWatch();
@@ -68,17 +69,7 @@ export async function updateWatch(first = false) {
 	}
 	if (!state.fetchedAt || Notification.permission !== 'granted') return;
 	const elapsed = (Date.now() - state.fetchedAt) / 1000;
-	const rows = loc.stops
-		.flatMap((s) =>
-			buildRows(
-				{ id: loc.id, name: loc.name, walkMin: s.walkMin ?? loc.walkMin, stops: [s] },
-				state.data,
-				elapsed,
-				30,
-				goal && idx ? { goal, idx } : undefined,
-			),
-		)
-		.sort((a, b) => a.leaveInSec - b.leaveInSec);
+	const rows = locationRows(loc, goal, elapsed);
 	const row = pickRow(rows, w.pin);
 	if (!row) return stopWatch(); // departed, or no longer reachable
 	const key = rowKey(row);

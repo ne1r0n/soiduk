@@ -1,0 +1,173 @@
+import L from 'leaflet';
+import { ensureGeo, nearStops, stopNameByCode, stopPos } from './geo.ts';
+import { ensureGtfs } from './gtfs.ts';
+import { t } from './i18n.ts';
+import { type Journey, journeyOf } from './journey.ts';
+import { toggleWatch } from './notify.ts';
+import { fmtClock, fmtMinutes, type LocationCfg, type Row } from './plan.ts';
+import { locationRows } from './rows.ts';
+import { selectedGoal, state } from './state.ts';
+import { loadStops } from './stops.ts';
+import { esc } from './util.ts';
+import { rowKey } from './watch.ts';
+
+let root: HTMLElement | null = null;
+let map: L.Map | null = null;
+
+export function closeTrip() {
+	map?.remove();
+	map = null;
+	if (root) {
+		root.hidden = true;
+		root.innerHTML = '';
+	}
+}
+
+export const tripOpen = () => map !== null || (root !== null && !root.hidden);
+
+const cssVar = (name: string) =>
+	getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#38bdf8';
+
+function badge(route: string, mode: string) {
+	const cls = mode === 'trol' || mode === 'tram' ? mode : 'bus';
+	return `<span class="badge mini ${cls}">${esc(route)}</span>`;
+}
+
+/** the few lines that say what to do: where to board, where to change, where you arrive */
+function steps(row: Row, j: Journey | null): string {
+	const line = (time: string, name: string, extra = '') =>
+		`<li><time>${time}</time><span class="tp-name">${esc(name)}</span>${extra}</li>`;
+	const out = [line(fmtClock(row.dep.expected), row.stopName, badge(row.dep.route, row.dep.mode))];
+	const v = row.arrive?.via;
+	if (v && j) {
+		const walk = j.walkSec
+			? `<span class="muted">🚶 ${Math.max(1, Math.round(j.walkSec / 60))} ${t('unit.min')}</span>`
+			: '';
+		out.push(line(fmtClock(v.depSec), v.stopName, `${walk}${badge(v.route, v.mode)}`));
+	}
+	if (row.arrive) out.push(line(fmtClock(row.arrive.sec), row.arrive.stopName));
+	return `<ol class="tp-steps">${out.join('')}</ol>`;
+}
+
+function draw(el: HTMLElement, j: Journey) {
+	const m = L.map(el, { zoomControl: false, attributionControl: true });
+	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		maxZoom: 19,
+		attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+	}).addTo(m);
+	const pts: L.LatLngExpression[] = [];
+	const at = (code: string) => {
+		const p = stopPos(code);
+		return p ? ([p.la, p.lo] as [number, number]) : undefined;
+	};
+	const dot = (
+		code: string,
+		color: string,
+		big: boolean,
+		side: 'top' | 'left' | 'right' = 'top',
+		label = true,
+	) => {
+		const p = at(code);
+		if (!p) return;
+		const mk = L.circleMarker(p, {
+			radius: big ? 9 : 6,
+			color,
+			fillColor: big ? color : cssVar('--bg'),
+			fillOpacity: 1,
+			weight: 3,
+		}).addTo(m);
+		if (label)
+			mk.bindTooltip(esc(stopNameByCode(code)), {
+				permanent: true,
+				direction: side,
+				offset: side === 'top' ? [0, -8] : [side === 'left' ? -8 : 8, 0],
+				className: 'pk-tip',
+			});
+	};
+	let prevEnd: [number, number] | undefined;
+	j.legs.forEach((leg) => {
+		const line = leg.codes.map(at).filter((p): p is [number, number] => !!p);
+		if (!line.length) return;
+		const color = cssVar(`--${leg.mode}`);
+		if (prevEnd)
+			L.polyline([prevEnd, line[0]], { color: '#94a3b8', weight: 3, dashArray: '2 7' }).addTo(m);
+		L.polyline(line, { color, weight: 5, opacity: 0.9 }).addTo(m);
+		pts.push(...line);
+		prevEnd = line[line.length - 1];
+	});
+	const first = j.legs[0].codes[0];
+	const last = j.legs[j.legs.length - 1].codes.at(-1);
+	if (first) dot(first, cssVar('--ok'), true);
+	if (j.legs.length > 1) {
+		dot(j.legs[0].codes.at(-1) ?? '', '#e2e8f0', false, 'left');
+		dot(
+			j.legs[1].codes[0],
+			'#e2e8f0',
+			false,
+			'right',
+			stopNameByCode(j.legs[1].codes[0]) !== stopNameByCode(j.legs[0].codes.at(-1) ?? ''),
+		);
+	}
+	if (last) dot(last, cssVar('--soon'), true, j.legs.length > 1 ? 'right' : 'top');
+	if (pts.length) m.fitBounds(L.latLngBounds(pts), { padding: [28, 28] });
+	return m;
+}
+
+/** bottom sheet for a tapped departure: the route on a mini map, the steps, and the notification switch */
+export async function openTrip(loc: LocationCfg, key: string) {
+	closeTrip();
+	root ??= document.getElementById('trip');
+	if (!root) return;
+	const goal = selectedGoal(loc);
+	await ensureGtfs();
+	ensureGeo();
+	await loadStops().catch(() => []);
+	const elapsed = state.fetchedAt ? (Date.now() - state.fetchedAt) / 1000 : 0;
+	const row = locationRows(loc, goal, elapsed).find((r) => rowKey(r) === key);
+	if (!row) return;
+	const j = state.gtfs ? journeyOf(state.gtfs, row, goal, nearStops) : null;
+	const watching = () => state.watch?.pin === key;
+	const dest = row.arrive ? row.arrive.stopName : row.dep.dest;
+	const sub = [
+		row.leaveInSec < 60 ? t('leave.now') : t('leave.in', { t: fmtMinutes(row.leaveInSec) }),
+		row.arrive ? `${t('card.arrival').toLowerCase()} ${fmtClock(row.arrive.sec)}` : '',
+	]
+		.filter(Boolean)
+		.join(' · ');
+	const bellLabel = () => (watching() ? `🔕 ${t('trip.notifyOff')}` : `🔔 ${t('trip.notify')}`);
+	root.hidden = false;
+	root.innerHTML = `
+    <div class="pk-bg" data-tp="close"></div>
+    <div class="tp-sheet" role="dialog" aria-modal="true">
+      <div class="tp-grab"></div>
+      <div class="tp-head">
+        ${badge(row.dep.route, row.dep.mode)}
+        <div class="tp-title"><b>${esc(dest)}</b><span class="muted">${esc(sub)}</span></div>
+        <button class="icon" data-tp="close" aria-label="${t('trip.close')}">✕</button>
+      </div>
+      ${j ? '<div id="tp-map"></div>' : `<p class="muted">${t('trip.noMap')}</p>`}
+      ${steps(row, j)}
+      <button class="btn primary tp-bell" data-tp="watch">${bellLabel()}</button>
+    </div>`;
+	if (j) {
+		const el = document.getElementById('tp-map');
+		if (el) {
+			map = draw(el, j);
+			const m = map;
+			setTimeout(() => m.invalidateSize(), 50);
+		}
+	}
+	const bell = root.querySelector<HTMLElement>('.tp-bell');
+	root.onclick = async (e) => {
+		const el = (e.target as HTMLElement).closest<HTMLElement>('[data-tp]');
+		if (el?.dataset.tp === 'close') closeTrip();
+		else if (el?.dataset.tp === 'watch') {
+			await toggleWatch(loc, key);
+			if (bell) bell.textContent = bellLabel();
+		}
+	};
+}
+
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape' && tripOpen()) closeTrip();
+});

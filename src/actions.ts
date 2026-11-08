@@ -2,13 +2,13 @@ import { offerImport, replaceConfig } from './backup.ts';
 import { refresh } from './data.ts';
 import { LANGS, type Lang, setLang, t } from './i18n.ts';
 import { updateLive } from './live.ts';
-import { toggleWatch } from './notify.ts';
 import { closePicker } from './picker.ts';
 import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
 import { edit, persist, render, state, stopKey } from './state.ts';
 import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
 import { setTheme, type ThemePref } from './theme.ts';
+import { openTrip } from './tripSheet.ts';
 import { moveItem } from './util.ts';
 
 const findLoc = (el: Element) =>
@@ -153,8 +153,8 @@ async function onClick(e: MouseEvent) {
 		case 'move-down':
 			moveEntry(btn, 1);
 			break;
-		case 'pin':
-			if (loc && btn.dataset.key) toggleWatch(loc, btn.dataset.key);
+		case 'trip':
+			if (loc && btn.dataset.key) openTrip(loc, btn.dataset.key);
 			break;
 		case 'select-goal':
 			if (loc) {

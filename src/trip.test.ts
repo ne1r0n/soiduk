@@ -28,7 +28,7 @@ const idx = buildIndex(raw);
 
 test('finds arrival at goal stop', () => {
 	const r = findArrival(idx, '41', 'A', 43200, new Set(['ROCCA1', 'ROCCA2']), NOW);
-	assert.deepEqual(r, { toCode: 'ROCCA1', sec: 43200 + 900, headsign: 'Rocca' });
+	assert.deepEqual(r, { toCode: 'ROCCA1', sec: 43200 + 900, headsign: 'Rocca', p: 0, i: 0, j: 2 });
 });
 
 test('wrong direction does not match goal', () => {
@@ -51,7 +51,7 @@ test('after-midnight trip of previous service day', () => {
 	// Tuesday 00:30 Tallinn = Monday service 24:30
 	const tue = new Date('2026-11-09T22:40:00Z');
 	const r = findArrival(idx, '41', 'A', 1800, new Set(['ROCCA1']), tue);
-	assert.deepEqual(r, { toCode: 'ROCCA1', sec: 1800 + 900, headsign: 'Rocca' });
+	assert.deepEqual(r, { toCode: 'ROCCA1', sec: 1800 + 900, headsign: 'Rocca', p: 0, i: 0, j: 2 });
 });
 
 test('preferred goal stop later on the trip wins over an earlier goal stop', () => {
@@ -59,7 +59,14 @@ test('preferred goal stop later on the trip wins over an earlier goal stop', () 
 	const plain = findArrival(idx, '41', 'A', 43200, both, NOW);
 	assert.equal(plain?.toCode, 'ROCCA1');
 	const pref = findArrival(idx, '41', 'A', 43200, both, NOW, new Set(['ROCCA2']));
-	assert.deepEqual(pref, { toCode: 'ROCCA2', sec: 43200 + 960, headsign: 'Rocca' });
+	assert.deepEqual(pref, {
+		toCode: 'ROCCA2',
+		sec: 43200 + 960,
+		headsign: 'Rocca',
+		p: 0,
+		i: 0,
+		j: 3,
+	});
 });
 
 test('preferred stop not on the trip falls back to other goal stops', () => {

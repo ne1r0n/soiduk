@@ -28,6 +28,10 @@ export interface Arrival {
 	/** scheduled arrival, seconds from service-day midnight (may exceed 86400) */
 	sec: number;
 	headsign: string;
+	/** the ride in the timetable: pattern, boarding index, alighting index */
+	p: number;
+	i: number;
+	j: number;
 }
 
 export function buildIndex(raw: RawGtfs): GtfsIndex {
@@ -171,10 +175,48 @@ export function findArrival(
 				const diff = Math.abs(start + pat.o[i] - t);
 				if (diff > MATCH_TOLERANCE_SEC || (best && diff >= best.diff)) continue;
 				if (!serviceActive(idx.raw.services[svc], date)) continue;
-				best = { toCode: pat.s[j], sec: schedSec + (pat.o[j] - pat.o[i]), headsign: pat.h, diff };
+				best = {
+					toCode: pat.s[j],
+					sec: schedSec + (pat.o[j] - pat.o[i]),
+					headsign: pat.h,
+					p,
+					i,
+					j,
+					diff,
+				};
 			}
 		}
 		if (best) break;
 	}
-	return best && { toCode: best.toCode, sec: best.sec, headsign: best.headsign };
+	if (!best) return null;
+	const { diff: _, ...arrival } = best;
+	return arrival;
+}
+
+/** the pattern a live departure belongs to (nearest timetable time within tolerance), and the stop's index in it */
+export function findBoarding(
+	idx: GtfsIndex,
+	route: string,
+	fromCode: string,
+	schedSec: number,
+	now = new Date(),
+): { p: number; i: number } | null {
+	const days = [
+		{ date: tallinnDate(now, 0), t: schedSec },
+		{ date: tallinnDate(now, -1), t: schedSec + 86400 },
+	];
+	let best = null as { p: number; i: number; diff: number } | null;
+	for (const { date, t } of days) {
+		for (const { p, i } of idx.byRouteStop.get(`${route}|${fromCode}`) ?? []) {
+			const pat = idx.raw.patterns[p];
+			if (i >= pat.s.length - 1) continue;
+			for (const [start, svc] of idx.tripsByPattern.get(p) ?? []) {
+				const diff = Math.abs(start + pat.o[i] - t);
+				if (diff > MATCH_TOLERANCE_SEC || (best && diff >= best.diff)) continue;
+				if (serviceActive(idx.raw.services[svc], date)) best = { p, i, diff };
+			}
+		}
+		if (best) break;
+	}
+	return best && { p: best.p, i: best.i };
 }

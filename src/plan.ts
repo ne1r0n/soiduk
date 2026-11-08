@@ -40,6 +40,8 @@ export interface LocationCfg {
 
 export interface Row {
 	siriId: number;
+	/** GTFS code of the boarding stop */
+	code?: string;
 	dep: Departure;
 	stopName: string;
 	/** seconds until the vehicle arrives */
@@ -77,7 +79,12 @@ export interface GoalCtx {
 	goal: GoalCfg;
 	idx: GtfsIndex;
 	/** when set, trips without a direct route get a one-change connection */
-	transfers?: { near: (code: string) => Near[]; name: (code: string) => string };
+	transfers?: {
+		near: (code: string) => Near[];
+		name: (code: string) => string;
+		/** is changing at `via` a step towards the goal (as opposed to away from it)? */
+		progress: (from: string, via: string, goals: ReadonlySet<string>) => boolean;
+	};
 }
 
 const arrivalCache = new Map<string, ReturnType<typeof findArrival>>();
@@ -109,6 +116,7 @@ export function buildRows(
 			if (leaveInSec < -graceSec) continue;
 			const row: Row = {
 				siriId: stop.siriId,
+				code: stop.code,
 				dep,
 				stopName: stop.name,
 				inSec,
@@ -153,6 +161,7 @@ export function buildRows(
 							ctx.transfers.near,
 							new Date(),
 							preferred,
+							(via) => ctx.transfers!.progress(stop.code!, via, goalCodes),
 						);
 						transferCache.set(tkey, x);
 					}

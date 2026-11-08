@@ -27,13 +27,15 @@ export interface Transfer {
 	toCode: string;
 	/** scheduled arrival at the goal stop */
 	sec: number;
+	/** where the legs are in the timetable: pattern, boarding index, alighting index – for both rides */
+	legs: [{ p: number; i: number; j: number }, { p: number; i: number; j: number }];
 }
 
 /** minimum time to change vehicles at the same stop / after a walk */
 export const MIN_CHANGE_SEC = 120;
 export const MIN_CHANGE_AFTER_WALK_SEC = 60;
 /** a longer wait than this is not a sensible connection */
-export const MAX_WAIT_SEC = 40 * 60;
+export const MAX_WAIT_SEC = 25 * 60;
 
 interface Feeder {
 	p: number;
@@ -83,6 +85,8 @@ export function findTransfer(
 	near: (code: string) => Near[],
 	now = new Date(),
 	preferred?: ReadonlySet<string>,
+	/** false for changing stops that lead away from the goal */
+	viaOk: (code: string) => boolean = () => true,
 ): Transfer | null {
 	const cands = idx.byRouteStop.get(`${route}|${fromCode}`);
 	if (!cands) return null;
@@ -110,6 +114,7 @@ export function findTransfer(
 			for (let k = i + 1; k < pat.s.length; k++) {
 				const arrive = schedSec + (pat.o[k] - pat.o[i]) + delaySec;
 				const via = pat.s[k];
+				if (!viaOk(via)) continue;
 				const options: Near[] = [{ code: via, walkSec: 0 }, ...near(via)];
 				for (const { code, walkSec } of options) {
 					const ready = arrive + walkSec + (walkSec ? MIN_CHANGE_AFTER_WALK_SEC : MIN_CHANGE_SEC);
@@ -132,6 +137,10 @@ export function findTransfer(
 									depSec: dep,
 									toCode: p2.s[f.j],
 									sec,
+									legs: [
+										{ p, i, j: k },
+										{ p: f.p, i: f.i, j: f.j },
+									],
 								};
 							}
 						}
