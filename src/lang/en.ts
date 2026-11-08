@@ -112,7 +112,7 @@ export const en: Record<Key, string> = {
 	'ed.backupHint':
 		'Settings are stored only in this browser. “Share” creates a link with all your settings: open it on another device or send it to a friend.',
 	'ed.kofi': '☕ Support on Ko-fi',
-	'ed.qr': 'Show app QR code',
+	'ed.qr': 'App QR code',
 	'ed.qrHint': 'Let someone point their phone camera at it to open the Sõiduk home page.',
 	'ed.data': 'Data:',
 	'ed.mapBy': 'Map ©',

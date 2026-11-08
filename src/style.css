@@ -873,13 +873,6 @@ main {
 }
 
 /* QR code of the app, to show to someone else */
-.qr summary {
-	cursor: pointer;
-	text-align: center;
-	color: var(--muted);
-	font-size: 14px;
-	padding: 8px;
-}
 .qr-box {
 	width: 200px;
 	margin: 8px auto;
