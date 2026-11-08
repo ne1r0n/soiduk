@@ -5,7 +5,7 @@ import { toggleWatch } from './notify.ts';
 import { closePicker } from './picker.ts';
 import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
-import { persist, render, state } from './state.ts';
+import { edit, persist, render, state, stopKey } from './state.ts';
 import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
 import { setTheme, type ThemePref } from './theme.ts';
 import { moveItem } from './util.ts';
@@ -88,6 +88,9 @@ async function onClick(e: MouseEvent) {
 			break;
 		case 'edit':
 			state.view = 'edit';
+			edit.tab = 'places';
+			edit.openLoc = cfg.locations[0]?.id ?? '';
+			edit.openStops.clear();
 			render();
 			updateLive();
 			break;
@@ -98,15 +101,37 @@ async function onClick(e: MouseEvent) {
 			updateLive();
 			refresh();
 			break;
-		case 'add-loc':
+		case 'add-loc': {
+			const id = uid();
+			edit.tab = 'places';
+			edit.openLoc = id;
 			cfg.locations.push({
-				id: uid(),
+				id,
 				name: cfg.locations.length ? 'Новая локация' : 'Дом',
 				walkMin: 5,
 				stops: [],
 				goals: [],
 			});
 			persist();
+			break;
+		}
+		case 'tab':
+			edit.tab = t.dataset.tab === 'app' ? 'app' : 'places';
+			render();
+			window.scrollTo(0, 0);
+			break;
+		case 'toggle-loc':
+			if (loc) {
+				edit.openLoc = edit.openLoc === loc.id ? '' : loc.id;
+				render();
+			}
+			break;
+		case 'toggle-stop':
+			if (loc && stop) {
+				const key = stopKey(loc.id, stop.siriId);
+				if (!edit.openStops.delete(key)) edit.openStops.add(key);
+				render();
+			}
 			break;
 		case 'theme':
 			setTheme(t.dataset.themeId as ThemePref);

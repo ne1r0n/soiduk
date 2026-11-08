@@ -24,6 +24,16 @@ export const state = {
 	gtfsState: 'idle' as 'idle' | 'loading' | 'error',
 	watch: loadWatch() as Watch | null,
 };
+/** UI state of the settings screen (not persisted: it always opens on «Места» with the first location expanded) */
+export const edit = {
+	tab: 'places' as 'places' | 'app',
+	/** id of the expanded location, '' = all collapsed */
+	openLoc: state.cfg.locations[0]?.id ?? '',
+	/** expanded stops, keyed `${locId}:${siriId}` */
+	openStops: new Set<string>(),
+};
+export const stopKey = (locId: string, siriId: number) => `${locId}:${siriId}`;
+
 state.view = state.cfg.locations.length ? 'dash' : 'edit';
 
 /** routes seen live at a stop – used for chips in the editor */

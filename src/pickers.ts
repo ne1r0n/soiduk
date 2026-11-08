@@ -2,7 +2,16 @@ import { fetchDepartures } from './api.ts';
 import { ensureGtfs } from './gtfs.ts';
 import { openPicker, refreshPicker } from './picker.ts';
 import type { GoalCfg, LocationCfg } from './plan.ts';
-import { knownDests, persist, remember, render, scheduleRender, state } from './state.ts';
+import {
+	edit,
+	knownDests,
+	persist,
+	remember,
+	render,
+	scheduleRender,
+	state,
+	stopKey,
+} from './state.ts';
 import { loadStops } from './stops.ts';
 import { saveSelection } from './store.ts';
 import { stopOverview } from './trip.ts';
@@ -74,6 +83,7 @@ export async function pickStop(loc: LocationCfg) {
 					if (state.view === 'edit') render();
 				})
 				.catch(() => {});
+			edit.openStops.add(stopKey(loc.id, info.s)); // pick the routes right away
 			persist();
 		},
 	});

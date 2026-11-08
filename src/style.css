@@ -932,3 +932,86 @@ main {
 .head-right .dirs.plan {
 	color: var(--warn);
 }
+
+/* settings: sticky header with tabs, collapsible cards */
+.edit-bar {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	margin: calc(-1 * max(16px, env(safe-area-inset-top))) -16px 14px;
+	padding: max(16px, env(safe-area-inset-top)) 16px 10px;
+	background: color-mix(in srgb, var(--bg) 92%, transparent);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border-bottom: 1px solid var(--line);
+}
+.edit-bar .top {
+	margin: 4px 0 12px;
+}
+.edit-bar .goalbar {
+	margin: 0;
+}
+.tabs .gchip {
+	flex: 1;
+	padding: 8px 12px;
+}
+.sec-title.first {
+	margin-top: 0;
+}
+.fold {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+	padding: 4px 0;
+	background: none;
+	border: 0;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.fold.chev-only {
+	flex: none;
+}
+.fold-main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+.fold-main small {
+	font-size: 12px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.chev {
+	display: inline-block;
+	width: 14px;
+	color: var(--muted);
+	transition: transform 0.15s;
+}
+[aria-expanded="true"] > .chev {
+	transform: rotate(90deg);
+}
+.card.edit.folded {
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+.card.edit.folded header {
+	margin-bottom: 0;
+}
+.stop.folded {
+	padding: 8px 12px;
+}
+.stop.folded .stop-head {
+	margin-bottom: 0;
+}
+.fold-main.inline {
+	display: block;
+}
+.chev {
+	font-size: 16px;
+	width: 16px;
+}

@@ -1,7 +1,7 @@
 import { KOFI_URL } from './config.ts';
 import { stopInfo } from './gtfs.ts';
-import type { GoalCfg, StopCfg } from './plan.ts';
-import { knownRoutes, state } from './state.ts';
+import type { GoalCfg, LocationCfg, StopCfg } from './plan.ts';
+import { edit, knownRoutes, state, stopKey } from './state.ts';
 import { loadPrev } from './store.ts';
 import { loadTheme, THEMES } from './theme.ts';
 import { esc, routeSort } from './util.ts';
@@ -36,7 +36,24 @@ function goalEditor(g: GoalCfg, index: number, count: number): string {
     </div>`;
 }
 
-function stopEditor(s: StopCfg, index: number, count: number): string {
+const CHEVRON = '<span class="chev" aria-hidden="true">▸</span>';
+
+/** one-line summary of a collapsed stop */
+function stopSummary(s: StopCfg): string {
+	const parts = [s.label, s.routes.length ? s.routes.join(', ') : 'все маршруты'].filter(Boolean);
+	return esc(parts.join(' · '));
+}
+
+function stopEditor(loc: LocationCfg, s: StopCfg, index: number, count: number): string {
+	const open = edit.openStops.has(stopKey(loc.id, s.siriId));
+	if (!open)
+		return `
+    <div class="stop folded" data-stop="${s.siriId}">
+      <div class="stop-head">
+        <button type="button" class="fold" data-act="toggle-stop" aria-expanded="false">${CHEVRON}<span class="fold-main"><b>${esc(s.name)}</b><small class="muted">${stopSummary(s)}</small></span></button>
+        ${moveButtons(index, count)}
+        <button class="icon danger" data-act="del-stop" aria-label="Удалить остановку">✕</button></div>
+    </div>`;
 	const info = stopInfo(s);
 	const routes = [...new Set([...info.routes, ...s.routes])].sort(routeSort);
 	const chips = routes.length
@@ -57,7 +74,8 @@ function stopEditor(s: StopCfg, index: number, count: number): string {
 			: '';
 	return `
     <div class="stop" data-stop="${s.siriId}">
-      <div class="stop-head"><b>${esc(s.name)}</b><span class="muted">#${s.siriId}</span>
+      <div class="stop-head">
+        <button type="button" class="fold" data-act="toggle-stop" aria-expanded="true">${CHEVRON}<span class="fold-main inline"><b>${esc(s.name)}</b> <span class="muted">#${s.siriId}</span></span></button>
         ${moveButtons(index, count)}
         <button class="icon danger" data-act="del-stop" aria-label="Удалить остановку">✕</button></div>
       ${dests.length ? `<div class="dirs">→ ${dests.slice(0, 4).map(esc).join(' · ')}</div>` : ''}
@@ -72,33 +90,53 @@ function stopEditor(s: StopCfg, index: number, count: number): string {
     </div>`;
 }
 
-export function editor(): string {
-	const theme = loadTheme();
-	const locs = state.cfg.locations
-		.map(
-			(l, li, all) => `
+/** summary of a collapsed location: «3 остановки · 2 цели» */
+function locSummary(l: LocationCfg): string {
+	const n = l.stops.length;
+	const g = l.goals?.length ?? 0;
+	const stops = n === 1 ? 'остановка' : n >= 2 && n <= 4 ? 'остановки' : 'остановок';
+	const goals = g === 1 ? 'цель' : g >= 2 && g <= 4 ? 'цели' : 'целей';
+	return `${n} ${stops} · ${g} ${goals}`;
+}
+
+function locationEditor(l: LocationCfg, li: number, all: LocationCfg[]): string {
+	if (edit.openLoc !== l.id)
+		return `
+    <section class="card edit folded" data-loc="${l.id}">
+      <header>
+        <button type="button" class="fold" data-act="toggle-loc" aria-expanded="false">${CHEVRON}<span class="fold-main"><b>${esc(l.name) || 'Без названия'}</b><small class="muted">${locSummary(l)}</small></span></button>
+        ${moveButtons(li, all.length)}
+        <button class="icon danger" data-act="del-loc" aria-label="Удалить локацию">🗑</button>
+      </header>
+    </section>`;
+	return `
     <section class="card edit" data-loc="${l.id}">
       <header>
+        <button type="button" class="fold chev-only" data-act="toggle-loc" aria-expanded="true" aria-label="Свернуть">${CHEVRON}</button>
         <input class="name" data-field="name" value="${esc(l.name)}" placeholder="Название (Дом, Работа…)" />
         ${moveButtons(li, all.length)}
         <button class="icon danger" data-act="del-loc" aria-label="Удалить локацию">🗑</button>
       </header>
       <div class="sec-title">Остановки рядом</div>
-      ${l.stops.map((s, i) => stopEditor(s, i, l.stops.length)).join('')}
+      ${l.stops.map((s, i) => stopEditor(l, s, i, l.stops.length)).join('')}
       <button class="btn ghost" data-act="add-stop">＋ Остановка</button>
       <div class="sec-title">Куда еду</div>
       ${(l.goals ?? []).map((g, i, gs) => goalEditor(g, i, gs.length)).join('')}
       <button class="btn ghost" data-act="add-goal">＋ Цель (например, торговый центр)</button>
-    </section>`,
-		)
-		.join('');
+    </section>`;
+}
+
+function placesTab(): string {
+	const locs = state.cfg.locations.map(locationEditor).join('');
 	return `
-    <div class="top"><h1>Настройки</h1>
-      <div class="actions"><button class="btn" data-act="done">Готово</button></div></div>
-    <main>
       ${locs || '<p class="muted">Добавьте первую локацию – например «Дом» – и выберите остановки рядом.</p>'}
-      <button class="btn primary" data-act="add-loc">＋ Локация</button>
-      <div class="sec-title">Оформление</div>
+      <button class="btn primary" data-act="add-loc">＋ Локация</button>`;
+}
+
+function appTab(): string {
+	const theme = loadTheme();
+	return `
+      <div class="sec-title first">Оформление</div>
       <div class="goalbar">
         ${THEMES.map((t) => `<button type="button" class="gchip ${t.id === theme ? 'on' : ''}" data-act="theme" data-theme-id="${t.id}">${t.label}</button>`).join('')}
       </div>
@@ -114,7 +152,24 @@ export function editor(): string {
         ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">☕ Поддержать на Ko-fi</a>` : ''}
         <p class="muted">Данные: <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · Карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
         <p class="muted version">Sõiduk v${__APP_VERSION__} · <a href="https://github.com/ne1r0n/soiduk" target="_blank" rel="noopener">GitHub</a> · сборка ${__APP_COMMIT__}, ${__APP_BUILT__}</p>
-      </footer>
+      </footer>`;
+}
+
+const TABS = [
+	{ id: 'places', label: 'Места' },
+	{ id: 'app', label: 'Приложение' },
+] as const;
+
+export function editor(): string {
+	return `
+    <div class="edit-bar">
+      <div class="top"><h1>Настройки</h1>
+        <div class="actions"><button class="btn" data-act="done">Готово</button></div></div>
+      <div class="goalbar tabs" role="tablist">
+        ${TABS.map((t) => `<button type="button" role="tab" aria-selected="${edit.tab === t.id}" class="gchip ${edit.tab === t.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}">${t.label}</button>`).join('')}
+      </div>
+    </div>
+    <main>${edit.tab === 'places' ? placesTab() : appTab()}
     </main>
 `;
 }
