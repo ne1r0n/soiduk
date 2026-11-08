@@ -1,11 +1,12 @@
 import { fmtClock, fmtMinutes, type Row } from './plan.ts';
 
-/** "Follow this goal": a notification that tracks the next catchable departure */
+/** A pinned departure: a notification that tells when to leave for that particular trip */
 export interface Watch {
 	locId: string;
+	/** goal selected when pinned ('' = all departures); decides whether arrival is known */
 	goalId: string;
-	/** pinned departure (see rowKey); absent = always the nearest catchable one */
-	pin?: string;
+	/** the pinned departure, see rowKey */
+	pin: string;
 	/** ms timestamp after which tracking stops by itself */
 	until: number;
 }
@@ -15,9 +16,9 @@ const KEY = 'soiduk.watch.v1';
 
 export const rowKey = (r: Row) => `${r.siriId}|${r.dep.route}|${r.dep.scheduled}`;
 
-/** pinned departure if it is still catchable, otherwise the nearest one */
-export function pickRow(rows: Row[], pin?: string): Row | undefined {
-	return (pin && rows.find((r) => rowKey(r) === pin)) || rows[0];
+/** the pinned departure, if it is still catchable */
+export function pickRow(rows: Row[], pin: string): Row | undefined {
+	return rows.find((r) => rowKey(r) === pin);
 }
 
 export function watchNotice(r: Row, locName: string): { title: string; body: string } {
@@ -27,7 +28,8 @@ export function watchNotice(r: Row, locName: string): { title: string; body: str
 		r.leaveInSec < 60
 			? 'Выходите сейчас'
 			: `Выходите в ${leaveAt} (через ${fmtMinutes(r.leaveInSec)})`;
-	const to = r.arrive ? ` → ${r.arrive.stopName}` : '';
+	// arrival is only known when a goal was selected
+	const to = ` → ${r.arrive ? r.arrive.stopName : r.dep.dest}`;
 	const arr = r.arrive ? ` · прибытие ${fmtClock(r.arrive.sec)}` : '';
 	return {
 		title,
@@ -38,7 +40,7 @@ export function watchNotice(r: Row, locName: string): { title: string; body: str
 export function loadWatch(): Watch | null {
 	try {
 		const w = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Watch | null;
-		return w && w.until > Date.now() ? w : null;
+		return w?.pin && w.until > Date.now() ? w : null;
 	} catch {
 		return null;
 	}

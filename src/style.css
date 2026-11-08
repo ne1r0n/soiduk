@@ -858,9 +858,6 @@ main {
 }
 
 /* watch (notification) */
-.gchip.bell.on {
-	border-color: var(--accent);
-}
 .rows li.pinnable {
 	cursor: pointer;
 }

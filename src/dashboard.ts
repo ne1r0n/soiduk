@@ -93,7 +93,7 @@ function stopCard(
 		.slice(0, 1 + MAX_EXTRA_ROWS)
 		.map(
 			(r) => `
-    <li${goal ? ` data-act="pin" data-key="${rowKey(r)}" class="pinnable"` : ''}>
+    <li data-act="pin" data-key="${rowKey(r)}" class="pinnable">
       ${badge(r)}
       <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="Прибытие">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? '<span class="pin" title="Слежу за этим рейсом">🔔</span>' : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
@@ -108,13 +108,10 @@ function stopCard(
 function locationSection(loc: LocationCfg, elapsed: number): string {
 	const goals = loc.goals ?? [];
 	const goal = selectedGoal(loc);
-	const w = state.watch;
-	const watching = !!goal && w?.locId === loc.id && w.goalId === goal.id;
 	const bar = goals.length
 		? `<div class="goalbar">
       <button class="gchip ${goal ? '' : 'on'}" data-act="select-goal" data-gid="">Все</button>
       ${goals.map((g) => `<button class="gchip ${goal?.id === g.id ? 'on' : ''}" data-act="select-goal" data-gid="${g.id}">→ ${esc(g.name)}</button>`).join('')}
-      ${goal ? `<button class="gchip bell ${watching ? 'on' : ''}" data-act="watch">${watching ? '🔔 Слежу' : '🔔 Напомнить'}</button>` : ''}
     </div>`
 		: '';
 	const head = `<div class="loc-head"><h3>${esc(loc.name)}</h3>${bar}</div>`;

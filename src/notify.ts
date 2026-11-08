@@ -25,13 +25,10 @@ export function stopWatch() {
 	render();
 }
 
-/** bell on a goal (pin undefined) or a pinned departure; tapping the active one stops watching */
-export async function toggleWatch(loc: LocationCfg, pin?: string) {
-	const goal = selectedGoal(loc);
-	if (!goal) return;
+/** tap on a departure: start notifying about it; tapping the pinned one again stops */
+export async function toggleWatch(loc: LocationCfg, pin: string) {
 	const w = state.watch;
-	const same = w?.locId === loc.id && w.goalId === goal.id;
-	if (same && (!pin || w.pin === pin)) return stopWatch();
+	if (w?.locId === loc.id && w.pin === pin) return stopWatch();
 	if (!('Notification' in window) || !('serviceWorker' in navigator)) {
 		alert(
 			'Этот браузер не умеет показывать уведомления. На iPhone добавьте сайт на экран «Домой» (Поделиться → На экран «Домой») и откройте оттуда.',
@@ -45,23 +42,28 @@ export async function toggleWatch(loc: LocationCfg, pin?: string) {
 		alert('Уведомления запрещены. Разрешите их для этого сайта в настройках браузера.');
 		return;
 	}
-	state.watch = { locId: loc.id, goalId: goal.id, pin, until: Date.now() + WATCH_TTL_MS };
+	state.watch = {
+		locId: loc.id,
+		goalId: selectedGoal(loc)?.id ?? '',
+		pin,
+		until: Date.now() + WATCH_TTL_MS,
+	};
 	saveWatch(state.watch);
 	notified = { key: '', shown: false };
 	render();
 	updateWatch(true);
 }
 
-/** refreshes the notification with the next catchable departure to the watched goal */
+/** refreshes the notification of the pinned departure; ends it once the departure is gone */
 export async function updateWatch(first = false) {
 	const w = state.watch;
 	if (!w) return;
 	if (Date.now() > w.until) return stopWatch();
 	const loc = state.cfg.locations.find((l) => l.id === w.locId);
-	const goal = loc?.goals?.find((g) => g.id === w.goalId);
-	if (!loc || !goal) return stopWatch();
+	if (!loc) return stopWatch();
+	const goal = loc.goals?.find((g) => g.id === w.goalId);
 	const idx = state.gtfs;
-	if (!idx) {
+	if (goal && !idx) {
 		ensureGtfs();
 		return;
 	}
@@ -74,12 +76,12 @@ export async function updateWatch(first = false) {
 				state.data,
 				elapsed,
 				30,
-				{ goal, idx },
+				goal && idx ? { goal, idx } : undefined,
 			),
 		)
 		.sort((a, b) => a.leaveInSec - b.leaveInSec);
 	const row = pickRow(rows, w.pin);
-	if (!row) return;
+	if (!row) return stopWatch(); // departed, or no longer reachable
 	const key = rowKey(row);
 	const reg = await navigator.serviceWorker.ready;
 	const visible = (await reg.getNotifications({ tag: TAG })).length > 0;

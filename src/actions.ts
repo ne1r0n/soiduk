@@ -88,11 +88,8 @@ async function onClick(e: MouseEvent) {
 			});
 			persist();
 			break;
-		case 'watch':
-			if (loc) toggleWatch(loc, undefined);
-			break;
 		case 'pin':
-			if (loc) toggleWatch(loc, t.dataset.key);
+			if (loc && t.dataset.key) toggleWatch(loc, t.dataset.key);
 			break;
 		case 'select-goal':
 			if (loc) {
