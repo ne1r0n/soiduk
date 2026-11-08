@@ -8,7 +8,7 @@ import { loadWatch, type Watch } from './watch.ts';
 /** The single mutable application state; modules read and update it directly. */
 export const state = {
 	cfg: load() as Config,
-	view: 'dash' as 'dash' | 'edit',
+	view: 'dash' as 'dash' | 'edit' | 'start',
 	/** latest departures per stop (SiriID) */
 	data: new Map<number, StopDepartures>(),
 	fetchedAt: 0,
@@ -34,7 +34,7 @@ export const edit = {
 };
 export const stopKey = (locId: string, siriId: number) => `${locId}:${siriId}`;
 
-state.view = state.cfg.locations.length ? 'dash' : 'edit';
+state.view = state.cfg.locations.length ? 'dash' : 'start';
 
 /** routes seen live at a stop – used for chips in the editor */
 export const knownRoutes = new Map<number, string[]>();

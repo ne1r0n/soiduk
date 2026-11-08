@@ -13,7 +13,7 @@ import {
 	state,
 	stopKey,
 } from './state.ts';
-import { loadStops } from './stops.ts';
+import { distanceM, loadStops, type StopInfo } from './stops.ts';
 import { saveSelection } from './store.ts';
 import { stopOverview } from './trip.ts';
 import { routeSort } from './util.ts';
@@ -59,16 +59,41 @@ function centroid(pts: { la?: number; lo?: number }[]) {
 		: undefined;
 }
 
-export async function pickStop(loc: LocationCfg) {
+/** the nearest stop in service within this distance is offered first when the position is known */
+const NEAR_M = 1500;
+
+export interface PickStopOpts {
+	/** the user's position: the map opens there with the nearest stop selected */
+	near?: { la: number; lo: number };
+	/** replaces the default «add to the location» */
+	onPick?: (s: StopInfo) => void;
+}
+
+/** @returns false when a position was given but no stop is close to it (the map is not opened) */
+export async function pickStop(loc: LocationCfg, o: PickStopOpts = {}): Promise<boolean> {
 	const everyStop = await loadStops();
 	await ensureGtfs(); // directions come from the timetable when the live feed has nothing
 	const all = inService(everyStop);
+	let preselect: StopInfo | undefined;
+	if (o.near) {
+		const { la, lo } = o.near;
+		let best = Infinity;
+		for (const s of all) {
+			const d = distanceM(la, lo, s.la, s.lo);
+			if (d < best) {
+				best = d;
+				preselect = s;
+			}
+		}
+		if (best > NEAR_M) return false;
+	}
 	const codeBySiri = new Map(all.map((s) => [s.s, s.id]));
 	openPicker({
 		all,
 		goal: false,
 		taken: new Set(loc.stops.map((s) => s.siriId)),
-		center: centroid(loc.stops),
+		center: o.near ?? centroid(loc.stops),
+		preselect,
 		// the timetable answers at once; the live feed (loaded lazily) takes over when it has something
 		dests: (id) => {
 			const live = knownDests.get(id);
@@ -81,6 +106,7 @@ export async function pickStop(loc: LocationCfg) {
 			state.gtfs ? stopOverview(state.gtfs, code).routes.sort(routeSort) : undefined,
 		peek,
 		onPick: (info) => {
+			if (o.onPick) return o.onPick(info);
 			loc.stops.push({
 				siriId: info.s,
 				code: info.id,
@@ -102,6 +128,7 @@ export async function pickStop(loc: LocationCfg) {
 			persist();
 		},
 	});
+	return true;
 }
 
 export async function pickGoalStop(loc: LocationCfg, goal: GoalCfg) {

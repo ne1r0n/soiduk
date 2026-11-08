@@ -1,6 +1,7 @@
 import { dashboard } from './dashboard.ts';
 import { editor } from './editor.ts';
 import { langChosen } from './i18n.ts';
+import { onboarding } from './onboard.ts';
 import { state } from './state.ts';
 import { byId } from './util.ts';
 import { welcome } from './welcome.ts';
@@ -19,8 +20,10 @@ export function renderApp() {
 	const scroll = window.scrollY;
 	byId('app').innerHTML = !langChosen()
 		? welcome()
-		: state.view === 'dash'
-			? dashboard()
-			: editor();
+		: state.view === 'start'
+			? onboarding()
+			: state.view === 'dash'
+				? dashboard()
+				: editor();
 	window.scrollTo(0, scroll);
 }

@@ -2,6 +2,7 @@ import { offerImport, replaceConfig } from './backup.ts';
 import { refresh } from './data.ts';
 import { LANGS, type Lang, setLang, t } from './i18n.ts';
 import { updateLive } from './live.ts';
+import { wizBack, wizDone, wizLocate, wizSearch, wizWalk } from './onboard.ts';
 import { closePicker } from './picker.ts';
 import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
@@ -84,6 +85,21 @@ async function onClick(e: MouseEvent) {
 	const stop = loc?.stops.find((s) => s.siriId === Number(stopEl?.dataset.stop));
 
 	switch (btn.dataset.act) {
+		case 'wiz-locate':
+			await wizLocate();
+			break;
+		case 'wiz-search':
+			await wizSearch();
+			break;
+		case 'wiz-walk':
+			wizWalk(Number(btn.dataset.min));
+			break;
+		case 'wiz-back':
+			wizBack();
+			break;
+		case 'wiz-done':
+			wizDone();
+			break;
 		case 'reload':
 			refresh();
 			break;
@@ -96,7 +112,7 @@ async function onClick(e: MouseEvent) {
 			updateLive();
 			break;
 		case 'done':
-			state.view = 'dash';
+			state.view = cfg.locations.length ? 'dash' : 'start';
 			closePicker();
 			render();
 			updateLive();

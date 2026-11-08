@@ -161,7 +161,10 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 	// towards a goal, hide stops on the wrong side of the road – unless that leaves nothing
 	if (goal && cards.some((c) => !c.empty)) cards = cards.filter((c) => !c.empty);
 	const hint = withChange ? `<p class="hint muted xfer-note">${t('card.xfer')}</p>` : '';
-	return wrap(hint + cards.map((c) => c.html).join(''));
+	const addGoal = goals.length
+		? ''
+		: `<div class="ob-goal"><p class="muted">${t('card.goalHint')}</p><button type="button" class="btn ghost" data-act="edit">${t('card.addGoal')}</button></div>`;
+	return wrap(hint + cards.map((c) => c.html).join('') + addGoal);
 }
 
 export function dashboard(): string {

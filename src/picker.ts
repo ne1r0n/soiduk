@@ -9,6 +9,8 @@ export interface PickerOpts {
 	goal: boolean;
 	taken: ReadonlySet<number>;
 	center?: { la: number; lo: number };
+	/** a stop that is already selected when the map opens */
+	preselect?: StopInfo;
 	/** destinations seen live at a stop (undefined = not loaded yet) */
 	dests: (siri: number) => string[] | undefined;
 	peek: (ids: number[]) => void;
@@ -63,7 +65,8 @@ export function openPicker(opts: PickerOpts) {
 		attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 	}).addTo(map);
 	const layer = L.layerGroup().addTo(map);
-	st = { opts, map, layer, q: '', visible: [] };
+	st = { opts, map, layer, q: '', visible: [], sel: opts.preselect };
+	if (opts.preselect) opts.peek([opts.preselect.s]);
 	map.on('moveend', redraw);
 	redraw();
 	// the map needs a size recalculation once the sheet has been laid out
