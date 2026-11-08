@@ -314,11 +314,18 @@ function centroid(pts: { la?: number; lo?: number }[]) {
 
 async function pickStop(loc: LocationCfg) {
   const all = await loadStops();
+  await ensureGtfs(); // directions come from the timetable when the live feed has nothing
+  const codeBySiri = new Map(all.map(s => [s.s, s.id]));
   openPicker({
     all, goal: false,
     taken: new Set(loc.stops.map(s => s.siriId)),
     center: centroid(loc.stops),
-    dests: id => knownDests.get(id), peek,
+    dests: id => {
+      const live = knownDests.get(id);
+      const code = codeBySiri.get(id);
+      return live && !live.length && gtfs && code ? stopOverview(gtfs, code).dests : live;
+    },
+    peek,
     onPick: info => {
       loc.stops.push({ siriId: info.s, code: info.id, name: info.n, walkMin: loc.stops.at(-1)?.walkMin ?? loc.walkMin, routes: [], la: info.la, lo: info.lo, area: info.ar || undefined, nb: info.nb });
       fetchDepartures(info.s).then(d => { remember(info.s, d); if (view === 'edit') render(); }).catch(() => {});
