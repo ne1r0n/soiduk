@@ -102,22 +102,17 @@ function draw(
 			});
 	};
 	let prevEnd: [number, number] | undefined;
-	j.legs.forEach((leg, n) => {
+	j.legs.forEach((leg) => {
 		// the real road when the geometry is there, otherwise straight lines between stops
-		const line =
-			roadBetween(shapes, leg.p, leg.i, leg.j) ??
-			leg.codes.map(at).filter((p): p is [number, number] => !!p);
+		// a stop can stand off the road: the line starts and ends exactly on the stop dots
+		const stops = leg.codes.map(at).filter((p): p is [number, number] => !!p);
+		const road = roadBetween(shapes, leg.p, leg.i, leg.j);
+		const line = road && stops.length ? [stops[0], ...road, stops[stops.length - 1]] : stops;
 		if (!line.length) return;
 		const color = cssVar(`--${leg.mode}`);
 		if (prevEnd)
 			L.polyline([prevEnd, line[0]], { color: '#94a3b8', weight: 3, dashArray: '2 7' }).addTo(m);
-		// where the two rides share a stretch, the first one shows as a wide halo under the second
-		L.polyline(
-			line,
-			n === 0 && j.legs.length > 1
-				? { color, weight: 9, opacity: 0.4 }
-				: { color, weight: 4, opacity: 1 },
-		).addTo(m);
+		L.polyline(line, { color, weight: 4, opacity: 1 }).addTo(m);
 		pts.push(...line);
 		// the stops on the way: small dots; the name shows on tap, and for all of them when zoomed in
 		for (const code of leg.codes.slice(1, -1)) {
