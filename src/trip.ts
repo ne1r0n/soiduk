@@ -67,6 +67,21 @@ export function serviceActive(s: RawGtfs['services'][number], date: { ymd: strin
 
 export interface PlannedDeparture { route: string; mode: 'bus' | 'trol' | 'tram'; headsign: string; sec: number }
 
+/** Routes and destinations (most frequent first) of vehicles that depart from a stop, per the timetable */
+export function stopOverview(idx: GtfsIndex, code: string): { routes: string[]; dests: string[] } {
+  const routes = new Set<string>();
+  const cnt = new Map<string, number>();
+  for (const route of idx.routesByStop.get(code) ?? []) {
+    for (const { p, i } of idx.byRouteStop.get(`${route}|${code}`) ?? []) {
+      const pat = idx.raw.patterns[p];
+      if (i >= pat.s.length - 1) continue; // terminus: nothing departs from here
+      routes.add(route);
+      cnt.set(pat.h, (cnt.get(pat.h) ?? 0) + (idx.tripsByPattern.get(p)?.length ?? 0));
+    }
+  }
+  return { routes: [...routes], dests: [...cnt].sort((a, b) => b[1] - a[1]).map(x => x[0]) };
+}
+
 /**
  * Timetable departures from a stop in the window [nowSec - backSec, nowSec + horizonSec]
  * (seconds from Tallinn midnight). Used when the live feed has nothing for the stop.

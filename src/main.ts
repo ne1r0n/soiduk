@@ -5,7 +5,7 @@ import { load, loadPrev, loadSelection, save, savePrev, saveSelection, sanitize,
 import { decodeConfig, encodeConfig, slim } from './share.ts';
 import { KOFI_URL } from './config.ts';
 import { loadStops, type StopInfo } from './stops.ts';
-import { buildIndex, scheduledDepartures, type GtfsIndex } from './trip.ts';
+import { buildIndex, scheduledDepartures, stopOverview, type GtfsIndex } from './trip.ts';
 import { loadWatch, pickRow, rowKey, saveWatch, watchNotice, WATCH_TTL_MS, type Watch } from './watch.ts';
 import { closePicker, openPicker, refreshPicker } from './picker.ts';
 
@@ -146,9 +146,18 @@ function leaveText(sec: number): string {
   return sec < 60 ? 'выйти сейчас' : `выйти через ${fmtMinutes(sec)}`;
 }
 
+/** routes/destinations of a stop: live feed first, timetable when the feed has nothing */
+function stopInfo(stop: StopCfg): { routes: string[]; dests: string[]; planned: boolean } {
+  const routes = knownRoutes.get(stop.siriId) ?? [], dests = knownDests.get(stop.siriId) ?? [];
+  if (routes.length || !stop.code) return { routes, dests, planned: false };
+  if (!gtfs) { ensureGtfs(); return { routes, dests, planned: false }; }
+  const o = stopOverview(gtfs, stop.code);
+  return { routes: o.routes.sort(routeSort), dests: o.dests, planned: true };
+}
+
 function stopDirection(stop: StopCfg): string {
   if (stop.label) return esc(stop.label);
-  const d = knownDests.get(stop.siriId) ?? [];
+  const d = stopInfo(stop).dests;
   return d.length ? `→ ${d.slice(0, 2).map(esc).join(' · ')}` : '';
 }
 
@@ -271,13 +280,14 @@ function goalEditor(g: GoalCfg): string {
 }
 
 function stopEditor(s: StopCfg): string {
-  const routes = [...new Set([...(knownRoutes.get(s.siriId) ?? []), ...s.routes])].sort(routeSort);
+  const info = stopInfo(s);
+  const routes = [...new Set([...info.routes, ...s.routes])].sort(routeSort);
   const chips = routes.length
     ? routes.map(r => `<button class="chip ${s.routes.includes(r) ? 'on' : ''}" data-act="toggle-route" data-route="${esc(r)}">${esc(r)}</button>`).join('')
     : knownRoutes.has(s.siriId)
       ? '<span class="warn">Нет онлайн-данных: у остановки нет рейсов в прогнозе (возможно, пригородная или не обслуживается сейчас)</span>'
       : '<span class="muted">маршруты загружаются…</span>';
-  const dests = knownDests.get(s.siriId) ?? [];
+  const dests = info.dests;
   const where = s.area ?? '';
   const map = s.la && s.lo ? `<a class="maplink" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.la}&mlon=${s.lo}#map=18/${s.la}/${s.lo}">🗺 карта</a>` : '';
   return `
@@ -290,6 +300,7 @@ function stopEditor(s: StopCfg): string {
       </label>
       ${where || map ? `<div class="where muted">${esc(where)} ${map}</div>` : ''}
       <div class="chips">${chips}</div>
+      ${info.planned && routes.length ? '<div class="hint muted">Онлайн-данных нет – маршруты по расписанию</div>' : ''}
       <div class="hint muted">${s.routes.length ? 'Только выбранные маршруты' : 'Все маршруты – выберите нужные'}</div>
       <input class="dest-in" data-field="label" value="${esc(s.label ?? '')}" placeholder="Пометка на карточке (например, «в центр»)" />
     </div>`;

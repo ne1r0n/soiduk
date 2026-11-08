@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildIndex, findArrival, scheduledDepartures, type RawGtfs } from './trip.ts';
+import { buildIndex, findArrival, scheduledDepartures, stopOverview, type RawGtfs } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
 const NOW = new Date('2026-11-09T10:00:00Z');
@@ -76,4 +76,10 @@ test('scheduledDepartures: skips the last stop and carries after-midnight trips 
   const tue = new Date('2026-11-10T00:10:00+02:00');
   const r = scheduledDepartures(idx, 'A', 600, tue, 3600);
   assert.deepEqual(r.map(x => x.sec), [1800]);
+});
+
+test('stopOverview: routes and destinations by timetable, terminus excluded', () => {
+  assert.deepEqual(stopOverview(idx, 'A'), { routes: ['41'], dests: ['Rocca'] });
+  assert.deepEqual(stopOverview(idx, 'ROCCA2'), { routes: ['41'], dests: ['Center'] });
+  assert.deepEqual(stopOverview(idx, 'NOPE'), { routes: [], dests: [] });
 });
