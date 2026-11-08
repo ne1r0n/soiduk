@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import { t } from './i18n.ts';
 import 'leaflet/dist/leaflet.css';
 import { distanceM, type StopInfo } from './stops.ts';
 
@@ -42,9 +43,9 @@ export function openPicker(opts: PickerOpts) {
     <div class="pk-bg" data-pk="close"></div>
     <div class="pk-sheet">
       <div class="pk-head">
-        <input id="pk-q" placeholder="Поиск по названию (необязательно)" autocomplete="off" />
-        <button class="icon" data-pk="geo" aria-label="Моё местоположение">📍</button>
-        <button class="icon" data-pk="close" aria-label="Закрыть">✕</button>
+        <input id="pk-q" placeholder="${t('pk.search')}" autocomplete="off" />
+        <button class="icon" data-pk="geo" aria-label="${t('pk.geo')}">📍</button>
+        <button class="icon" data-pk="close" aria-label="${t('pk.close')}">✕</button>
       </div>
       <div id="pk-map"></div>
       <div id="pk-sel"></div>
@@ -158,7 +159,7 @@ function dirHtml(s: StopInfo): string {
 	if (st!.opts.goal) {
 		const r = st!.opts.routesAt?.(s.id);
 		return r?.length
-			? `<span class="dirs">маршруты: ${r.slice(0, 8).map(esc).join(' · ')}</span>`
+			? `<span class="dirs">${t('pk.routes')}${r.slice(0, 8).map(esc).join(' · ')}</span>`
 			: '';
 	}
 	const d = st!.opts.dests(s.s);
@@ -166,7 +167,7 @@ function dirHtml(s: StopInfo): string {
 		? '<span class="muted">…</span>'
 		: d.length
 			? `<span class="dirs">→ ${d.slice(0, 3).map(esc).join(' · ')}</span>`
-			: '<span class="warn">нет онлайн-данных</span>';
+			: `<span class="warn">${t('pk.noLive')}</span>`;
 }
 
 function renderList() {
@@ -174,8 +175,7 @@ function renderList() {
 	const ul = document.getElementById('pk-list')!;
 	const items = listItems();
 	if (!st.q && st.map.getZoom() < MIN_ZOOM_STOPS) {
-		ul.innerHTML =
-			'<li class="muted">Приблизьте карту, чтобы увидеть остановки, или найдите по названию</li>';
+		ul.innerHTML = `<li class="muted">${t('pk.zoom')}</li>`;
 		return;
 	}
 	if (!st.opts.goal) st.opts.peek(items.slice(0, 8).map((s) => s.s));
@@ -186,10 +186,10 @@ function renderList() {
     <li data-pk="item" data-siri="${s.s}" class="${st!.sel?.s === s.s ? 'sel' : ''}">
       <div class="r-main"><b>${esc(s.n)}</b> ${dirHtml(s)}
         <div class="muted r-sub">${esc(s.ar)}</div></div>
-      <span class="muted r-side">${Math.round(s.dist)} м</span>
+      <span class="muted r-side">${Math.round(s.dist)} ${t('unit.m')}</span>
     </li>`,
 			)
-			.join('') || '<li class="muted">Ничего не найдено</li>';
+			.join('') || `<li class="muted">${t('pk.none')}</li>`;
 }
 
 function renderSel() {
@@ -197,7 +197,7 @@ function renderSel() {
 	const el = document.getElementById('pk-sel')!;
 	const s = st.sel;
 	if (!s) {
-		el.innerHTML = '<div class="muted pk-hint">Нажмите на остановку на карте или в списке</div>';
+		el.innerHTML = `<div class="muted pk-hint">${t('pk.hint')}</div>`;
 		return;
 	}
 	const taken = st.opts.taken.has(s.s);
@@ -205,20 +205,20 @@ function renderSel() {
     <div class="pk-card">
       <div class="pk-card-main"><b>${esc(s.n)}</b> ${dirHtml(s)}
         <div class="muted r-sub">${esc(s.ar)}${s.ar ? ' · ' : ''}#${s.s}</div></div>
-      <button class="btn primary" data-pk="add" ${taken ? 'disabled' : ''}>${taken ? 'Уже добавлена' : '＋ Добавить'}</button>
+      <button class="btn primary" data-pk="add" ${taken ? 'disabled' : ''}>${taken ? t('pk.taken') : t('pk.add')}</button>
     </div>`;
 }
 
 document.addEventListener('click', (e) => {
 	if (!st) return;
-	const t = (e.target as HTMLElement).closest<HTMLElement>('[data-pk]');
-	if (!t) return;
-	switch (t.dataset.pk) {
+	const el = (e.target as HTMLElement).closest<HTMLElement>('[data-pk]');
+	if (!el) return;
+	switch (el.dataset.pk) {
 		case 'close':
 			closePicker();
 			break;
 		case 'item': {
-			const s = st.opts.all.find((x) => x.s === Number(t.dataset.siri));
+			const s = st.opts.all.find((x) => x.s === Number(el.dataset.siri));
 			if (s) select(s, true);
 			break;
 		}
@@ -233,7 +233,7 @@ document.addEventListener('click', (e) => {
 		case 'geo':
 			navigator.geolocation?.getCurrentPosition(
 				(p) => st?.map.setView([p.coords.latitude, p.coords.longitude], 17),
-				() => alert('Не удалось получить геопозицию'),
+				() => alert(t('pk.geoFail')),
 				{ enableHighAccuracy: true, timeout: 10000 },
 			);
 			break;

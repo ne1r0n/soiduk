@@ -1,4 +1,5 @@
 import type { Departure, StopDepartures } from './api.ts';
+import { t } from './i18n.ts';
 import { findArrival, type GtfsIndex } from './trip.ts';
 
 export interface StopCfg {
@@ -136,7 +137,7 @@ export function fmtClock(secFromMidnight: number): string {
 /** "now" / "5 min" / "1 h 05 min" */
 export function fmtMinutes(sec: number): string {
 	const m = Math.floor(sec / 60);
-	if (m <= 0) return 'сейчас';
-	if (m < 60) return `${m} мин`;
-	return `${Math.floor(m / 60)} ч ${String(m % 60).padStart(2, '0')} мин`;
+	if (m <= 0) return t('time.now');
+	if (m < 60) return `${m} ${t('unit.min')}`;
+	return `${Math.floor(m / 60)} ${t('unit.h')} ${String(m % 60).padStart(2, '0')} ${t('unit.min')}`;
 }

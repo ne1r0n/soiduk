@@ -1,4 +1,5 @@
 import { backfill, refresh } from './data.ts';
+import { t } from './i18n.ts';
 import { updateLive } from './live.ts';
 import { persist, render, state } from './state.ts';
 import { type Config, savePrev, saveSelection } from './store.ts';
@@ -17,14 +18,12 @@ export function replaceConfig(next: Config) {
 function describe(c: Config): string {
 	const stops = c.locations.reduce((n, l) => n + l.stops.length, 0);
 	const goals = c.locations.reduce((n, l) => n + (l.goals?.length ?? 0), 0);
-	return `локаций: ${c.locations.length}, остановок: ${stops}, целей: ${goals}`;
+	return t('msg.describe', { l: c.locations.length, s: stops, g: goals });
 }
 
 export function offerImport(next: Config, source: string) {
-	const have = state.cfg.locations.length
-		? `Текущие настройки (${describe(state.cfg)}) будут заменены, но их можно вернуть.`
-		: '';
-	if (confirm(`Импортировать настройки из ${source}? ${describe(next)}. ${have}`)) {
+	const have = state.cfg.locations.length ? t('msg.importHave', { d: describe(state.cfg) }) : '';
+	if (confirm(t('msg.import', { source, d: describe(next), have }))) {
 		replaceConfig(next);
 		state.view = 'dash';
 		render();

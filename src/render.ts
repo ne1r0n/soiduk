@@ -1,7 +1,9 @@
 import { dashboard } from './dashboard.ts';
 import { editor } from './editor.ts';
+import { langChosen } from './i18n.ts';
 import { state } from './state.ts';
 import { byId } from './util.ts';
+import { welcome } from './welcome.ts';
 
 /** Redraws #app from the state. */
 export function renderApp() {
@@ -15,6 +17,10 @@ export function renderApp() {
 	)
 		return;
 	const scroll = window.scrollY;
-	byId('app').innerHTML = state.view === 'dash' ? dashboard() : editor();
+	byId('app').innerHTML = !langChosen()
+		? welcome()
+		: state.view === 'dash'
+			? dashboard()
+			: editor();
 	window.scrollTo(0, scroll);
 }

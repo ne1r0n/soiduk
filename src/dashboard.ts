@@ -1,5 +1,6 @@
 import type { Mode } from './api.ts';
 import { ensureGtfs, stopInfo } from './gtfs.ts';
+import { t } from './i18n.ts';
 import {
 	buildRows,
 	fmtClock,
@@ -36,7 +37,7 @@ function delayTag(sec: number) {
 
 /** "выйти через 5 мин" / "выйти сейчас" */
 function leaveText(sec: number): string {
-	return sec < 60 ? 'выйти сейчас' : `выйти через ${fmtMinutes(sec)}`;
+	return sec < 60 ? t('leave.now') : t('leave.in', { t: fmtMinutes(sec) });
 }
 
 function stopDirection(stop: StopCfg): string {
@@ -63,26 +64,26 @@ function stopCard(
 	};
 	const dir = stopDirection(stop);
 	const stale = state.failed.has(stop.siriId)
-		? ' <span class="stale" title="Данные устарели">⚠</span>'
+		? ` <span class="stale" title="${t('card.stale')}">⚠</span>`
 		: '';
 	const isPlanned = state.planned.has(stop.siriId);
 	const head = `<header>
       <div class="stop-title"><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
-      <div class="head-right"><span class="walk">🚶 ${walk} мин${stale}</span><span class="dirs${isPlanned ? ' plan' : ''}" ${isPlanned ? 'title="Онлайн-данных нет, показано расписание"' : ''}>${isPlanned ? 'по расписанию' : 'отправление'}</span></div></header>`;
+      <div class="head-right"><span class="walk">🚶 ${walk} ${t('unit.min')}${stale}</span><span class="dirs${isPlanned ? ' plan' : ''}" ${isPlanned ? `title="${t('card.planTitle')}"` : ''}>${isPlanned ? t('card.plan') : t('card.dep')}</span></div></header>`;
 	const shell = (inner: string, cls = '') => ({
 		html: `<section class="card ${cls}">${head}${inner}</section>`,
 		empty: false,
 	});
 	if (!state.data.has(stop.siriId)) {
 		return shell(
-			`<p class="muted">${state.loading || !state.fetchedAt ? 'Загрузка…' : 'Нет данных'}</p>`,
+			`<p class="muted">${state.loading || !state.fetchedAt ? t('card.loading') : t('card.nodata')}</p>`,
 		);
 	}
 
 	const rows = buildRows(one, state.data, elapsed, 30, goal && idx ? { goal, idx } : undefined);
 	if (!rows.length) {
 		const r = shell(
-			`<p class="muted">${goal ? `Рейсы с этой остановки не идут до «${esc(goal.name)}»` : 'Подходящих отправлений нет'}</p>`,
+			`<p class="muted">${goal ? t('card.noGoal', { goal: esc(goal.name) }) : t('card.noDeps')}</p>`,
 		);
 		return { ...r, empty: true };
 	}
@@ -95,7 +96,7 @@ function stopCard(
 			(r) => `
     <li data-act="pin" data-key="${rowKey(r)}" class="pinnable">
       ${badge(r)}
-      <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="Прибытие">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? '<span class="pin" title="Слежу за этим рейсом">🔔</span>' : ''}</span>
+      <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="${t('card.arrival')}">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? `<span class="pin" title="${t('card.pinned')}">🔔</span>` : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
       <span class="in">${leaveText(r.leaveInSec)}</span>
     </li>`,
@@ -110,7 +111,7 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 	const goal = selectedGoal(loc);
 	const bar = goals.length
 		? `<div class="goalbar">
-      <button class="gchip ${goal ? '' : 'on'}" data-act="select-goal" data-gid="">Все</button>
+      <button class="gchip ${goal ? '' : 'on'}" data-act="select-goal" data-gid="">${t('card.all')}</button>
       ${goals.map((g) => `<button class="gchip ${goal?.id === g.id ? 'on' : ''}" data-act="select-goal" data-gid="${g.id}">→ ${esc(g.name)}</button>`).join('')}
     </div>`
 		: '';
@@ -118,17 +119,13 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 	const wrap = (inner: string) =>
 		`<section class="loc" data-loc="${loc.id}">${head}${inner}</section>`;
 	const note = (msg: string) => wrap(`<section class="card"><p class="muted">${msg}</p></section>`);
-	if (!loc.stops.length) return note('Нет остановок. Добавьте в настройках.');
+	if (!loc.stops.length) return note(t('card.noStops'));
 
 	let idx: GtfsIndex | null = null;
 	if (goal) {
 		ensureGtfs();
 		if (!state.gtfs) {
-			return note(
-				state.gtfsState === 'error'
-					? 'Не удалось загрузить расписание (запустите npm run gtfs)'
-					: 'Загрузка расписания…',
-			);
+			return note(state.gtfsState === 'error' ? t('card.gtfsError') : t('card.gtfsLoading'));
 		}
 		idx = state.gtfs;
 	}

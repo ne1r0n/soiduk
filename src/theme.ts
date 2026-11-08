@@ -4,10 +4,10 @@ const KEY = 'soiduk.theme';
 /** browser UI colour (address bar / status bar) per theme */
 const CHROME: Record<'light' | 'dark', string> = { light: '#f3f5fa', dark: '#0b0f19' };
 
-export const THEMES: { id: ThemePref; label: string }[] = [
-	{ id: 'auto', label: 'Авто' },
-	{ id: 'light', label: 'Светлая' },
-	{ id: 'dark', label: 'Тёмная' },
+export const THEMES: { id: ThemePref; label: 'theme.auto' | 'theme.light' | 'theme.dark' }[] = [
+	{ id: 'auto', label: 'theme.auto' },
+	{ id: 'light', label: 'theme.light' },
+	{ id: 'dark', label: 'theme.dark' },
 ];
 
 /** 'auto' follows the system setting */

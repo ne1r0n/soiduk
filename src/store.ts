@@ -1,3 +1,4 @@
+import { t } from './i18n.ts';
 import type { LocationCfg } from './plan.ts';
 
 const KEY = 'ttransport.config.v1';
@@ -30,14 +31,14 @@ const str = (v: unknown): string | undefined => (v ? String(v) : undefined);
 
 export function sanitize(x: unknown): Config {
 	const locs = obj(x).locations;
-	if (!Array.isArray(locs)) throw new Error('Неверный формат конфигурации');
+	if (!Array.isArray(locs)) throw new Error(t('err.config'));
 	return {
 		locations: locs.map((raw, i) => {
 			const l = obj(raw);
 			const walkMin = Math.max(0, Number(l.walkMin) || 0);
 			return {
 				id: String(l.id ?? `loc${i}`),
-				name: String(l.name ?? 'Локация'),
+				name: String(l.name ?? t('def.loc')),
 				walkMin,
 				stops: arr(l.stops)
 					.map((raw) => {
@@ -60,7 +61,7 @@ export function sanitize(x: unknown): Config {
 					const g = obj(raw);
 					return {
 						id: String(g.id ?? `g${i}_${j}`),
-						name: String(g.name ?? 'Цель'),
+						name: String(g.name ?? t('def.goal')),
 						stops: arr(g.stops)
 							.map((raw) => {
 								const x = obj(raw);

@@ -1015,3 +1015,28 @@ main {
 	font-size: 16px;
 	width: 16px;
 }
+
+/* first-launch language picker */
+.welcome {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	padding-top: 18vh;
+	text-align: center;
+}
+.welcome h1 {
+	margin: 0;
+	font-size: 28px;
+}
+.lang-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: min(280px, 100%);
+	margin-top: 8px;
+}
+.lang-list .btn {
+	padding: 14px;
+	font-size: 17px;
+}

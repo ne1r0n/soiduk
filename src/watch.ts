@@ -1,3 +1,4 @@
+import { t } from './i18n.ts';
 import { fmtClock, fmtMinutes, type Row } from './plan.ts';
 
 /** A pinned departure: a notification that tells when to leave for that particular trip */
@@ -26,14 +27,14 @@ export function watchNotice(r: Row, locName: string): { title: string; body: str
 	const leaveAt = fmtClock(r.dep.expected - walkSec);
 	const title =
 		r.leaveInSec < 60
-			? 'Выходите сейчас'
-			: `Выходите в ${leaveAt} (через ${fmtMinutes(r.leaveInSec)})`;
+			? t('watch.now')
+			: t('watch.at', { at: leaveAt, in: fmtMinutes(r.leaveInSec) });
 	// arrival is only known when a goal was selected
 	const to = ` → ${r.arrive ? r.arrive.stopName : r.dep.dest}`;
-	const arr = r.arrive ? ` · прибытие ${fmtClock(r.arrive.sec)}` : '';
+	const arr = r.arrive ? ` · ${t('watch.arr')} ${fmtClock(r.arrive.sec)}` : '';
 	return {
 		title,
-		body: `${r.dep.route}${to} · отправление ${fmtClock(r.dep.expected)}${arr}\n${locName}`,
+		body: `${r.dep.route}${to} · ${t('watch.dep')} ${fmtClock(r.dep.expected)}${arr}\n${locName}`,
 	};
 }
 

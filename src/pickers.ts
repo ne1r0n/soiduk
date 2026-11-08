@@ -1,5 +1,6 @@
 import { fetchDepartures } from './api.ts';
 import { ensureGtfs } from './gtfs.ts';
+import { isDefaultName } from './i18n.ts';
 import { openPicker, refreshPicker } from './picker.ts';
 import type { GoalCfg, LocationCfg } from './plan.ts';
 import {
@@ -107,7 +108,7 @@ export async function pickGoalStop(loc: LocationCfg, goal: GoalCfg) {
 		onPick: (info) => {
 			if (!goal.stops.some((g) => g.code === info.id))
 				goal.stops.push({ code: info.id, name: info.n });
-			if (goal.name === 'Новая цель') goal.name = info.n;
+			if (isDefaultName('def.newGoal', goal.name)) goal.name = info.n;
 			state.selection[loc.id] = goal.id;
 			saveSelection(state.selection);
 			persist();

@@ -1,5 +1,6 @@
 import { offerImport, replaceConfig } from './backup.ts';
 import { refresh } from './data.ts';
+import { LANGS, type Lang, setLang, t } from './i18n.ts';
 import { updateLive } from './live.ts';
 import { toggleWatch } from './notify.ts';
 import { closePicker } from './picker.ts';
@@ -26,9 +27,9 @@ async function shareLink() {
 	}
 	try {
 		await navigator.clipboard.writeText(url);
-		alert('Ссылка скопирована. Откройте её на другом устройстве, чтобы перенести настройки.');
+		alert(t('msg.linkCopied'));
 	} catch {
-		prompt('Скопируйте ссылку:', url);
+		prompt(t('msg.copyLink'), url);
 	}
 }
 
@@ -48,9 +49,9 @@ function importFile() {
 	inp.onchange = async () => {
 		try {
 			const f = inp.files?.[0];
-			if (f) offerImport(sanitize(JSON.parse(await f.text())), 'файла');
+			if (f) offerImport(sanitize(JSON.parse(await f.text())), t('msg.fromFile'));
 		} catch (err) {
-			alert(`Не удалось прочитать файл: ${err}`);
+			alert(t('msg.fileFail', { err: String(err) }));
 		}
 	};
 	inp.click();
@@ -75,14 +76,14 @@ function moveEntry(btn: HTMLElement, delta: number) {
 }
 
 async function onClick(e: MouseEvent) {
-	const t = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
-	if (!t) return;
+	const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
+	if (!btn) return;
 	const { cfg } = state;
-	const loc = findLoc(t);
-	const stopEl = t.closest<HTMLElement>('[data-stop]');
+	const loc = findLoc(btn);
+	const stopEl = btn.closest<HTMLElement>('[data-stop]');
 	const stop = loc?.stops.find((s) => s.siriId === Number(stopEl?.dataset.stop));
 
-	switch (t.dataset.act) {
+	switch (btn.dataset.act) {
 		case 'reload':
 			refresh();
 			break;
@@ -107,7 +108,7 @@ async function onClick(e: MouseEvent) {
 			edit.openLoc = id;
 			cfg.locations.push({
 				id,
-				name: cfg.locations.length ? 'Новая локация' : 'Дом',
+				name: cfg.locations.length ? t('def.newLoc') : t('def.home'),
 				walkMin: 5,
 				stops: [],
 				goals: [],
@@ -116,7 +117,7 @@ async function onClick(e: MouseEvent) {
 			break;
 		}
 		case 'tab':
-			edit.tab = t.dataset.tab === 'app' ? 'app' : 'places';
+			edit.tab = btn.dataset.tab === 'app' ? 'app' : 'places';
 			render();
 			window.scrollTo(0, 0);
 			break;
@@ -133,43 +134,52 @@ async function onClick(e: MouseEvent) {
 				render();
 			}
 			break;
+		case 'lang': {
+			const l = LANGS.find((x) => x === btn.dataset.lang) as Lang | undefined;
+			if (l) {
+				setLang(l);
+				render();
+				updateLive();
+			}
+			break;
+		}
 		case 'theme':
-			setTheme(t.dataset.themeId as ThemePref);
+			setTheme(btn.dataset.themeId as ThemePref);
 			render();
 			break;
 		case 'move-up':
-			moveEntry(t, -1);
+			moveEntry(btn, -1);
 			break;
 		case 'move-down':
-			moveEntry(t, 1);
+			moveEntry(btn, 1);
 			break;
 		case 'pin':
-			if (loc && t.dataset.key) toggleWatch(loc, t.dataset.key);
+			if (loc && btn.dataset.key) toggleWatch(loc, btn.dataset.key);
 			break;
 		case 'select-goal':
 			if (loc) {
-				state.selection[loc.id] = t.dataset.gid ?? '';
+				state.selection[loc.id] = btn.dataset.gid ?? '';
 				saveSelection(state.selection);
 				render();
 			}
 			break;
 		case 'add-goal':
 			if (loc) {
-				loc.goals = [...(loc.goals ?? []), { id: uid(), name: 'Новая цель', stops: [] }];
+				loc.goals = [...(loc.goals ?? []), { id: uid(), name: t('def.newGoal'), stops: [] }];
 				persist();
 			}
 			break;
 		case 'del-goal': {
-			const gid = goalIdOf(t);
-			if (loc && gid && confirm('Удалить цель?')) {
+			const gid = goalIdOf(btn);
+			if (loc && gid && confirm(t('msg.delGoal'))) {
 				loc.goals = (loc.goals ?? []).filter((g) => g.id !== gid);
 				persist();
 			}
 			break;
 		}
 		case 'toggle-pref': {
-			const g = loc?.goals?.find((x) => x.id === goalIdOf(t));
-			const x = g?.stops.find((y) => y.code === t.dataset.code);
+			const g = loc?.goals?.find((x) => x.id === goalIdOf(btn));
+			const x = g?.stops.find((y) => y.code === btn.dataset.code);
 			if (x) {
 				x.pref = x.pref ? undefined : true;
 				persist();
@@ -177,20 +187,20 @@ async function onClick(e: MouseEvent) {
 			break;
 		}
 		case 'del-goal-stop': {
-			const g = loc?.goals?.find((x) => x.id === goalIdOf(t));
+			const g = loc?.goals?.find((x) => x.id === goalIdOf(btn));
 			if (g) {
-				g.stops = g.stops.filter((x) => x.code !== t.dataset.code);
+				g.stops = g.stops.filter((x) => x.code !== btn.dataset.code);
 				persist();
 			}
 			break;
 		}
 		case 'add-goal-stop': {
-			const goal = loc?.goals?.find((g) => g.id === goalIdOf(t));
+			const goal = loc?.goals?.find((g) => g.id === goalIdOf(btn));
 			if (loc && goal) await pickGoalStop(loc, goal);
 			break;
 		}
 		case 'del-loc':
-			if (loc && confirm(`Удалить «${loc.name}»?`)) {
+			if (loc && confirm(t('msg.delLoc', { name: loc.name }))) {
 				cfg.locations = cfg.locations.filter((l) => l !== loc);
 				persist();
 			}
@@ -202,7 +212,7 @@ async function onClick(e: MouseEvent) {
 			}
 			break;
 		case 'toggle-route': {
-			const r = t.dataset.route;
+			const r = btn.dataset.route;
 			if (stop && r) {
 				stop.routes = stop.routes.includes(r)
 					? stop.routes.filter((x) => x !== r)
@@ -225,13 +235,7 @@ async function onClick(e: MouseEvent) {
 			break;
 		case 'restore-prev': {
 			const prev = loadPrev();
-			if (
-				prev &&
-				confirm(
-					'Вернуть настройки, которые были до последнего импорта? Текущие станут «предыдущими».',
-				)
-			)
-				replaceConfig(prev);
+			if (prev && confirm(t('msg.restore'))) replaceConfig(prev);
 			break;
 		}
 	}

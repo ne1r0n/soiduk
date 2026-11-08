@@ -1,5 +1,6 @@
 import { KOFI_URL } from './config.ts';
 import { stopInfo } from './gtfs.ts';
+import { getLang, LANG_NAMES, LANGS, plural, t } from './i18n.ts';
 import type { GoalCfg, LocationCfg, StopCfg } from './plan.ts';
 import { edit, knownRoutes, state, stopKey } from './state.ts';
 import { loadPrev } from './store.ts';
@@ -8,31 +9,31 @@ import { esc, routeSort } from './util.ts';
 
 /** ↑ ↓ buttons; the container (location, stop or goal) is found from the DOM on click */
 function moveButtons(index: number, count: number): string {
-	return `<span class="moves"><button type="button" class="icon move" data-act="move-up" aria-label="Выше" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" class="icon move" data-act="move-down" aria-label="Ниже" ${index === count - 1 ? 'disabled' : ''}>↓</button></span>`;
+	return `<span class="moves"><button type="button" class="icon move" data-act="move-up" aria-label="${t('ed.up')}" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" class="icon move" data-act="move-down" aria-label="${t('ed.down')}" ${index === count - 1 ? 'disabled' : ''}>↓</button></span>`;
 }
 
 function goalEditor(g: GoalCfg, index: number, count: number): string {
 	return `
     <div class="stop" data-goal="${g.id}">
       <div class="stop-head">
-        <input class="name" data-field="goal-name" value="${esc(g.name)}" placeholder="Название цели" />
+        <input class="name" data-field="goal-name" value="${esc(g.name)}" placeholder="${t('ed.goalName')}" />
         ${moveButtons(index, count)}
-        <button class="icon danger" data-act="del-goal" aria-label="Удалить цель">✕</button>
+        <button class="icon danger" data-act="del-goal" aria-label="${t('ed.delGoal')}">✕</button>
       </div>
       <div class="chips">
         ${
 					g.stops
 						.map(
 							(x) => `<span class="chip on goal-stop ${x.pref ? 'pref' : ''}">
-          <button class="x star" data-act="toggle-pref" data-code="${esc(x.code)}" aria-label="Предпочтительная" title="Предпочтительная остановка">${x.pref ? '★' : '☆'}</button>
+          <button class="x star" data-act="toggle-pref" data-code="${esc(x.code)}" aria-label="${t('ed.pref')}" title="${t('ed.prefTitle')}">${x.pref ? '★' : '☆'}</button>
           ${esc(x.name)} <small>${esc(x.code)}</small>
-          <button class="x" data-act="del-goal-stop" data-code="${esc(x.code)}" aria-label="Убрать">✕</button></span>`,
+          <button class="x" data-act="del-goal-stop" data-code="${esc(x.code)}" aria-label="${t('ed.remove')}">✕</button></span>`,
 						)
-						.join('') || '<span class="muted">остановок нет</span>'
+						.join('') || `<span class="muted">${t('ed.noStops')}</span>`
 				}
       </div>
-      <div class="hint muted">Показываем рейсы, которые доедут до одной из этих остановок, и время прибытия. ★ — предпочтительная: если рейс едет и до неё, покажем прибытие на неё, а не на более раннюю.</div>
-      <button class="btn ghost" data-act="add-goal-stop">＋ Остановки у цели</button>
+      <div class="hint muted">${t('ed.goalHint')}</div>
+      <button class="btn ghost" data-act="add-goal-stop">${t('ed.addGoalStop')}</button>
     </div>`;
 }
 
@@ -40,7 +41,9 @@ const CHEVRON = '<span class="chev" aria-hidden="true">▸</span>';
 
 /** one-line summary of a collapsed stop */
 function stopSummary(s: StopCfg): string {
-	const parts = [s.label, s.routes.length ? s.routes.join(', ') : 'все маршруты'].filter(Boolean);
+	const parts = [s.label, s.routes.length ? s.routes.join(', ') : t('ed.allRoutes')].filter(
+		Boolean,
+	);
 	return esc(parts.join(' · '));
 }
 
@@ -52,7 +55,7 @@ function stopEditor(loc: LocationCfg, s: StopCfg, index: number, count: number):
       <div class="stop-head">
         <button type="button" class="fold" data-act="toggle-stop" aria-expanded="false">${CHEVRON}<span class="fold-main"><b>${esc(s.name)}</b><small class="muted">${stopSummary(s)}</small></span></button>
         ${moveButtons(index, count)}
-        <button class="icon danger" data-act="del-stop" aria-label="Удалить остановку">✕</button></div>
+        <button class="icon danger" data-act="del-stop" aria-label="${t('ed.delStop')}">✕</button></div>
     </div>`;
 	const info = stopInfo(s);
 	const routes = [...new Set([...info.routes, ...s.routes])].sort(routeSort);
@@ -64,29 +67,29 @@ function stopEditor(loc: LocationCfg, s: StopCfg, index: number, count: number):
 				)
 				.join('')
 		: knownRoutes.has(s.siriId)
-			? '<span class="warn">Нет онлайн-данных: у остановки нет рейсов в прогнозе (возможно, пригородная или не обслуживается сейчас)</span>'
-			: '<span class="muted">маршруты загружаются…</span>';
+			? `<span class="warn">${t('ed.noForecast')}</span>`
+			: `<span class="muted">${t('ed.routesLoading')}</span>`;
 	const dests = info.dests;
 	const where = s.area ?? '';
 	const map =
 		s.la && s.lo
-			? `<a class="maplink" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.la}&mlon=${s.lo}#map=18/${s.la}/${s.lo}">🗺 карта</a>`
+			? `<a class="maplink" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${s.la}&mlon=${s.lo}#map=18/${s.la}/${s.lo}">${t('ed.map')}</a>`
 			: '';
 	return `
     <div class="stop" data-stop="${s.siriId}">
       <div class="stop-head">
         <button type="button" class="fold" data-act="toggle-stop" aria-expanded="true">${CHEVRON}<span class="fold-main inline"><b>${esc(s.name)}</b> <span class="muted">#${s.siriId}</span></span></button>
         ${moveButtons(index, count)}
-        <button class="icon danger" data-act="del-stop" aria-label="Удалить остановку">✕</button></div>
+        <button class="icon danger" data-act="del-stop" aria-label="${t('ed.delStop')}">✕</button></div>
       ${dests.length ? `<div class="dirs">→ ${dests.slice(0, 4).map(esc).join(' · ')}</div>` : ''}
-      <label class="walk-edit">🚶 Пешком до этой остановки, мин
+      <label class="walk-edit">${t('ed.walk')}
         <input type="number" min="0" max="60" inputmode="numeric" data-field="stop-walk" value="${s.walkMin ?? 5}" />
       </label>
       ${where || map ? `<div class="where muted">${esc(where)} ${map}</div>` : ''}
       <div class="chips">${chips}</div>
-      ${info.planned && routes.length ? '<div class="hint muted">Онлайн-данных нет – маршруты по расписанию</div>' : ''}
-      <div class="hint muted">${s.routes.length ? 'Только выбранные маршруты' : 'Все маршруты – выберите нужные'}</div>
-      <input class="dest-in" data-field="label" value="${esc(s.label ?? '')}" placeholder="Пометка на карточке (например, «в центр»)" />
+      ${info.planned && routes.length ? `<div class="hint muted">${t('ed.planRoutes')}</div>` : ''}
+      <div class="hint muted">${s.routes.length ? t('ed.onlySelected') : t('ed.pickRoutes')}</div>
+      <input class="dest-in" data-field="label" value="${esc(s.label ?? '')}" placeholder="${t('ed.labelPh')}" />
     </div>`;
 }
 
@@ -94,9 +97,7 @@ function stopEditor(loc: LocationCfg, s: StopCfg, index: number, count: number):
 function locSummary(l: LocationCfg): string {
 	const n = l.stops.length;
 	const g = l.goals?.length ?? 0;
-	const stops = n === 1 ? 'остановка' : n >= 2 && n <= 4 ? 'остановки' : 'остановок';
-	const goals = g === 1 ? 'цель' : g >= 2 && g <= 4 ? 'цели' : 'целей';
-	return `${n} ${stops} · ${g} ${goals}`;
+	return `${n} ${plural('w.stops', n)} · ${g} ${plural('w.goals', g)}`;
 }
 
 function locationEditor(l: LocationCfg, li: number, all: LocationCfg[]): string {
@@ -104,69 +105,73 @@ function locationEditor(l: LocationCfg, li: number, all: LocationCfg[]): string 
 		return `
     <section class="card edit folded" data-loc="${l.id}">
       <header>
-        <button type="button" class="fold" data-act="toggle-loc" aria-expanded="false">${CHEVRON}<span class="fold-main"><b>${esc(l.name) || 'Без названия'}</b><small class="muted">${locSummary(l)}</small></span></button>
+        <button type="button" class="fold" data-act="toggle-loc" aria-expanded="false">${CHEVRON}<span class="fold-main"><b>${esc(l.name) || t('ed.untitled')}</b><small class="muted">${locSummary(l)}</small></span></button>
         ${moveButtons(li, all.length)}
-        <button class="icon danger" data-act="del-loc" aria-label="Удалить локацию">🗑</button>
+        <button class="icon danger" data-act="del-loc" aria-label="${t('ed.delLoc')}">🗑</button>
       </header>
     </section>`;
 	return `
     <section class="card edit" data-loc="${l.id}">
       <header>
-        <button type="button" class="fold chev-only" data-act="toggle-loc" aria-expanded="true" aria-label="Свернуть">${CHEVRON}</button>
-        <input class="name" data-field="name" value="${esc(l.name)}" placeholder="Название (Дом, Работа…)" />
+        <button type="button" class="fold chev-only" data-act="toggle-loc" aria-expanded="true" aria-label="${t('ed.collapse')}">${CHEVRON}</button>
+        <input class="name" data-field="name" value="${esc(l.name)}" placeholder="${t('ed.locName')}" />
         ${moveButtons(li, all.length)}
-        <button class="icon danger" data-act="del-loc" aria-label="Удалить локацию">🗑</button>
+        <button class="icon danger" data-act="del-loc" aria-label="${t('ed.delLoc')}">🗑</button>
       </header>
-      <div class="sec-title">Остановки рядом</div>
+      <div class="sec-title">${t('ed.nearby')}</div>
       ${l.stops.map((s, i) => stopEditor(l, s, i, l.stops.length)).join('')}
-      <button class="btn ghost" data-act="add-stop">＋ Остановка</button>
-      <div class="sec-title">Куда еду</div>
+      <button class="btn ghost" data-act="add-stop">${t('ed.addStop')}</button>
+      <div class="sec-title">${t('ed.goals')}</div>
       ${(l.goals ?? []).map((g, i, gs) => goalEditor(g, i, gs.length)).join('')}
-      <button class="btn ghost" data-act="add-goal">＋ Цель (например, торговый центр)</button>
+      <button class="btn ghost" data-act="add-goal">${t('ed.addGoal')}</button>
     </section>`;
 }
 
 function placesTab(): string {
 	const locs = state.cfg.locations.map(locationEditor).join('');
 	return `
-      ${locs || '<p class="muted">Добавьте первую локацию – например «Дом» – и выберите остановки рядом.</p>'}
-      <button class="btn primary" data-act="add-loc">＋ Локация</button>`;
+      ${locs || `<p class="muted">${t('ed.empty')}</p>`}
+      <button class="btn primary" data-act="add-loc">${t('ed.addLoc')}</button>`;
 }
 
 function appTab(): string {
 	const theme = loadTheme();
 	return `
-      <div class="sec-title first">Оформление</div>
+      <div class="sec-title first">${t('ed.language')}</div>
       <div class="goalbar">
-        ${THEMES.map((t) => `<button type="button" class="gchip ${t.id === theme ? 'on' : ''}" data-act="theme" data-theme-id="${t.id}">${t.label}</button>`).join('')}
+        ${LANGS.map((l) => `<button type="button" class="gchip ${l === getLang() ? 'on' : ''}" data-act="lang" data-lang="${l}">${LANG_NAMES[l]}</button>`).join('')}
       </div>
-      <div class="sec-title">Резервная копия</div>
+      <div class="sec-title">${t('ed.appearance')}</div>
+      <div class="goalbar">
+        ${THEMES.map((th) => `<button type="button" class="gchip ${th.id === theme ? 'on' : ''}" data-act="theme" data-theme-id="${th.id}">${t(th.label)}</button>`).join('')}
+      </div>
+      <div class="sec-title">${t('ed.backup')}</div>
       <div class="io">
-        <button class="btn" data-act="share-link">🔗 Поделиться</button>
-        <button class="btn" data-act="export-file">⬇ Экспорт</button>
-        <button class="btn" data-act="import-file">⬆ Импорт</button>
+        <button class="btn" data-act="share-link">${t('ed.share')}</button>
+        <button class="btn" data-act="export-file">${t('ed.export')}</button>
+        <button class="btn" data-act="import-file">${t('ed.import')}</button>
       </div>
-      ${loadPrev() ? '<button class="btn ghost" data-act="restore-prev">↩ Вернуть настройки, которые были до последнего импорта</button>' : ''}
-      <p class="hint muted">Настройки хранятся только в этом браузере. «Поделиться» создаёт ссылку со всеми настройками: откройте её на другом устройстве или отправьте другу.</p>
+      ${loadPrev() ? `<button class="btn ghost" data-act="restore-prev">${t('ed.restore')}</button>` : ''}
+      <p class="hint muted">${t('ed.backupHint')}</p>
       <footer class="about">
-        ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">☕ Поддержать на Ko-fi</a>` : ''}
-        <p class="muted">Данные: <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · Карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
-        <p class="muted version">Sõiduk v${__APP_VERSION__} · <a href="https://github.com/ne1r0n/soiduk" target="_blank" rel="noopener">GitHub</a> · сборка ${__APP_COMMIT__}, ${__APP_BUILT__}</p>
+        ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">${t('ed.kofi')}</a>` : ''}
+        <p class="muted">${t('ed.data')} <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · ${t('ed.mapBy')} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
+        <p class="muted version">Sõiduk v${__APP_VERSION__} · <a href="https://github.com/ne1r0n/soiduk" target="_blank" rel="noopener">GitHub</a> · ${t('ed.build')} ${__APP_COMMIT__}, ${__APP_BUILT__}</p>
       </footer>`;
 }
 
 const TABS = [
-	{ id: 'places', label: 'Места' },
-	{ id: 'app', label: 'Приложение' },
+	{ id: 'places', label: 'tab.places' },
+	{ id: 'app', label: 'tab.app' },
 ] as const;
 
 export function editor(): string {
 	return `
     <div class="edit-bar">
-      <div class="top"><h1>Настройки</h1>
-        <div class="actions"><button class="btn" data-act="done">Готово</button></div></div>
+      <div class="top"><h1>${t('app.settings')}</h1>
+        <div class="actions"><button class="btn" data-act="done">${t('app.done')}</button></div></div>
       <div class="goalbar tabs" role="tablist">
-        ${TABS.map((t) => `<button type="button" role="tab" aria-selected="${edit.tab === t.id}" class="gchip ${edit.tab === t.id ? 'on' : ''}" data-act="tab" data-tab="${t.id}">${t.label}</button>`).join('')}
+        ${TABS.map((tab) => `<button type="button" role="tab" aria-selected="${edit.tab === tab.id}" class="gchip ${edit.tab === tab.id ? 'on' : ''}" data-act="tab" data-tab="${tab.id}">${t(tab.label)}</button>`).join('')}
       </div>
     </div>
     <main>${edit.tab === 'places' ? placesTab() : appTab()}

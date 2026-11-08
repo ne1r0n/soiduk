@@ -1,3 +1,4 @@
+import { t } from './i18n.ts';
 import { type Config, sanitize } from './store.ts';
 
 /**
@@ -44,6 +45,6 @@ export async function decodeConfig(token: string): Promise<Config> {
 	const kind = token.slice(0, 2);
 	let bytes: Uint8Array = unb64(token.slice(2));
 	if (kind === 'z.') bytes = await pipe(bytes, new DecompressionStream('deflate-raw'));
-	else if (kind !== 'j.') throw new Error('Неизвестный формат ссылки');
+	else if (kind !== 'j.') throw new Error(t('err.linkFormat'));
 	return sanitize(JSON.parse(new TextDecoder().decode(bytes)));
 }

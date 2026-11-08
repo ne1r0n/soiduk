@@ -1,4 +1,5 @@
 import { ensureGtfs } from './gtfs.ts';
+import { t } from './i18n.ts';
 import { buildRows, type LocationCfg } from './plan.ts';
 import { render, selectedGoal, state } from './state.ts';
 import { pickRow, rowKey, saveWatch, WATCH_TTL_MS, watchNotice } from './watch.ts';
@@ -30,16 +31,14 @@ export async function toggleWatch(loc: LocationCfg, pin: string) {
 	const w = state.watch;
 	if (w?.locId === loc.id && w.pin === pin) return stopWatch();
 	if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-		alert(
-			'Этот браузер не умеет показывать уведомления. На iPhone добавьте сайт на экран «Домой» (Поделиться → На экран «Домой») и откройте оттуда.',
-		);
+		alert(t('notify.unsupported'));
 		return;
 	}
 	if (
 		Notification.permission !== 'granted' &&
 		(await Notification.requestPermission()) !== 'granted'
 	) {
-		alert('Уведомления запрещены. Разрешите их для этого сайта в настройках браузера.');
+		alert(t('notify.denied'));
 		return;
 	}
 	state.watch = {
