@@ -251,7 +251,7 @@ function editor(): string {
         <button class="btn" data-act="import-file">⬆ Импорт</button>
       </div>
       ${loadPrev() ? '<button class="btn ghost" data-act="restore-prev">↩ Вернуть настройки, которые были до последнего импорта</button>' : ''}
-      <p class="hint muted">Настройки хранятся только в этом браузере. «Поделиться» создаёт ссылку со всеми настройками: откройте её на другом устройстве или отправьте другу – предложат импортировать. «Экспорт» сохраняет файл, «Импорт» загружает его.</p>
+      <p class="hint muted">Настройки хранятся только в этом браузере. «Поделиться» создаёт ссылку со всеми настройками: откройте её на другом устройстве или отправьте другу.</p>
       <footer class="about">
         ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">☕ Поддержать на Ko-fi</a>` : ''}
         <p class="muted">Данные: <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · Карта © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
