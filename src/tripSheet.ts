@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import { ensureGeo, nearStops, stopNameByCode, stopPos } from './geo.ts';
 import { ensureGtfs } from './gtfs.ts';
-import { t } from './i18n.ts';
+import { plural, t } from './i18n.ts';
 import { type Journey, journeyOf } from './journey.ts';
 import { toggleWatch } from './notify.ts';
 import { fmtClock, fmtMinutes, type LocationCfg, type Row } from './plan.ts';
@@ -38,13 +38,25 @@ function badge(route: string, mode: string) {
 function steps(row: Row, j: Journey | null): string {
 	const line = (time: string, name: string, extra = '') =>
 		`<li><time>${time}</time><span class="tp-name">${esc(name)}</span>${extra}</li>`;
-	const out = [line(fmtClock(row.dep.expected), row.stopName, badge(row.dep.route, row.dep.mode))];
+	const count = (l?: { i: number; j: number }) => {
+		const n = l ? l.j - l.i : 0;
+		return n > 0 ? `<span class="muted tp-n">${n} ${plural('w.stops', n)}</span>` : '';
+	};
+	const out = [
+		line(
+			fmtClock(row.dep.expected),
+			row.stopName,
+			count(j?.legs[0]) + badge(row.dep.route, row.dep.mode),
+		),
+	];
 	const v = row.arrive?.via;
 	if (v && j) {
 		const walk = j.walkSec
 			? `<span class="muted">🚶 ${Math.max(1, Math.round(j.walkSec / 60))} ${t('unit.min')}</span>`
 			: '';
-		out.push(line(fmtClock(v.depSec), v.stopName, `${walk}${badge(v.route, v.mode)}`));
+		out.push(
+			line(fmtClock(v.depSec), v.stopName, `${walk}${count(j.legs[1])}${badge(v.route, v.mode)}`),
+		);
 	}
 	if (row.arrive) out.push(line(fmtClock(row.arrive.sec), row.arrive.stopName));
 	return `<ol class="tp-steps">${out.join('')}</ol>`;
@@ -107,6 +119,28 @@ function draw(
 				: { color, weight: 4, opacity: 1 },
 		).addTo(m);
 		pts.push(...line);
+		// the stops on the way: small dots; the name shows on tap, and for all of them when zoomed in
+		for (const code of leg.codes.slice(1, -1)) {
+			const p = at(code);
+			if (!p) continue;
+			L.circleMarker(p, {
+				radius: 3.5,
+				color,
+				fillColor: cssVar('--bg'),
+				fillOpacity: 1,
+				weight: 2,
+				interactive: false,
+			}).addTo(m);
+			// a larger invisible target so a finger can hit it
+			const hit = L.circleMarker(p, { radius: 13, stroke: false, fillOpacity: 0 }).addTo(m);
+			hit.bindTooltip(esc(stopNameByCode(code)), {
+				permanent: true,
+				direction: 'top',
+				offset: [0, -4],
+				className: 'pk-tip pk-mid',
+			});
+			hit.on('click', () => hit.getTooltip()?.getElement()?.classList.toggle('pk-show'));
+		}
 		prevEnd = line[line.length - 1];
 	});
 	const first = j.legs[0].codes[0];
@@ -124,7 +158,10 @@ function draw(
 	const fit = () => {
 		if (pts.length) m.fitBounds(L.latLngBounds(pts), { padding: [28, 28], animate: false });
 	};
+	const zoomClass = () => el.classList.toggle('tp-zoomed', m.getZoom() >= 16);
+	m.on('zoomend', zoomClass);
 	fit();
+	zoomClass();
 	return { m, fit };
 }
 
