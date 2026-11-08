@@ -1040,3 +1040,36 @@ main {
 	padding: 14px;
 	font-size: 17px;
 }
+
+/* connection with one change: extra line under the departure */
+.rows li.xfer {
+	grid-template-areas: "b d w" "b i w" "v v v";
+}
+.rows .via {
+	grid-area: v;
+	margin-top: 4px;
+	color: var(--muted);
+	font-size: 0.85em;
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	flex-wrap: wrap;
+}
+.badge.mini {
+	min-width: 0;
+	height: auto;
+	padding: 1px 6px;
+	font-size: 0.9em;
+	border-radius: 6px;
+}
+.xfer-note {
+	margin: 2px 4px 6px;
+}
+.rows li .badge.mini,
+.rows li:first-child .badge.mini {
+	min-width: 0;
+	height: auto;
+	padding: 1px 6px;
+	font-size: 0.9em;
+	border-radius: 6px;
+}

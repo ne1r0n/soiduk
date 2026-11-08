@@ -1,5 +1,6 @@
 import type { Departure, StopDepartures } from './api.ts';
 import { t } from './i18n.ts';
+import { findTransfer, type Near } from './transfer.ts';
 import { findArrival, type GtfsIndex } from './trip.ts';
 
 export interface StopCfg {
@@ -48,7 +49,19 @@ export interface Row {
 	/** actual delay in seconds (positive = late) */
 	delaySec: number;
 	/** present when planning towards a goal */
-	arrive?: { sec: number; travelSec: number; stopName: string };
+	arrive?: {
+		sec: number;
+		travelSec: number;
+		stopName: string;
+		/** set when the trip needs a change: where, onto which route, and how far to walk */
+		via?: {
+			stopName: string;
+			route: string;
+			mode: 'bus' | 'trol' | 'tram';
+			depSec: number;
+			walkSec: number;
+		};
+	};
 }
 
 export function matches(dep: Departure, stop: StopCfg): boolean {
@@ -63,10 +76,16 @@ export function matches(dep: Departure, stop: StopCfg): boolean {
 export interface GoalCtx {
 	goal: GoalCfg;
 	idx: GtfsIndex;
+	/** when set, trips without a direct route get a one-change connection */
+	transfers?: { near: (code: string) => Near[]; name: (code: string) => string };
 }
 
 const arrivalCache = new Map<string, ReturnType<typeof findArrival>>();
-export const clearArrivalCache = () => arrivalCache.clear();
+const transferCache = new Map<string, ReturnType<typeof findTransfer>>();
+export const clearArrivalCache = () => {
+	arrivalCache.clear();
+	transferCache.clear();
+};
 
 export function buildRows(
 	loc: LocationCfg,
@@ -112,19 +131,67 @@ export function buildRows(
 					);
 					arrivalCache.set(key, a);
 				}
-				if (!a) continue; // this trip never reaches the goal
-				const travelSec = a.sec - dep.scheduled;
-				row.arrive = {
-					sec: dep.expected + travelSec,
-					travelSec,
-					stopName: ctx.goal.stops.find((g) => g.code === a!.toCode)?.name ?? '',
-				};
+				const goalName = (code: string) => ctx.goal.stops.find((g) => g.code === code)?.name ?? '';
+				if (a) {
+					const travelSec = a.sec - dep.scheduled;
+					row.arrive = {
+						sec: dep.expected + travelSec,
+						travelSec,
+						stopName: goalName(a.toCode),
+					};
+				} else if (ctx.transfers) {
+					const tkey = `${key}|x|${dep.expected}`;
+					let x = transferCache.get(tkey);
+					if (x === undefined) {
+						x = findTransfer(
+							ctx.idx,
+							dep.route,
+							stop.code,
+							dep.scheduled,
+							dep.expected - dep.scheduled,
+							goalCodes,
+							ctx.transfers.near,
+							new Date(),
+							preferred,
+						);
+						transferCache.set(tkey, x);
+					}
+					if (!x) continue;
+					row.arrive = {
+						sec: x.sec,
+						travelSec: x.sec - dep.expected,
+						stopName: goalName(x.toCode),
+						via: {
+							stopName: ctx.transfers.name(x.viaCode),
+							route: x.route,
+							mode: x.mode,
+							depSec: x.depSec,
+							walkSec: x.walkSec,
+						},
+					};
+				} else continue; // this trip never reaches the goal
 			}
 			rows.push(row);
 		}
 	}
 	rows.sort((a, b) => a.leaveInSec - b.leaveInSec);
-	return rows;
+	return dropRedundantChanges(rows);
+}
+
+/**
+ * Several first vehicles often lead to the same second vehicle; leaving earlier than necessary gains
+ * nothing, so only the latest of them is kept (rows are sorted by leave time).
+ */
+export function dropRedundantChanges(rows: Row[]): Row[] {
+	const lastFor = new Map<string, Row>();
+	for (const r of rows) {
+		const v = r.arrive?.via;
+		if (v) lastFor.set(`${r.siriId}|${v.route}|${v.depSec}`, r);
+	}
+	return rows.filter((r) => {
+		const v = r.arrive?.via;
+		return !v || lastFor.get(`${r.siriId}|${v.route}|${v.depSec}`) === r;
+	});
 }
 
 export function fmtClock(secFromMidnight: number): string {

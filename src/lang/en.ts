@@ -42,6 +42,9 @@ export const en: Record<Key, string> = {
 	'card.noGoal': 'Trips from this stop don’t go to “{goal}”',
 	'card.noDeps': 'No suitable departures',
 	'card.arrival': 'Arrival',
+	'card.change': 'Change',
+	'card.xfer':
+		'No direct routes. Showing options with one change (the second ride is by timetable).',
 	'card.pinned': 'Following this trip',
 	'card.all': 'All',
 	'card.noStops': 'No stops. Add some in settings.',

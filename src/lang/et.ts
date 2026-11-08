@@ -42,6 +42,8 @@ export const et: Record<Key, string> = {
 	'card.noGoal': 'Sellest peatusest ei sõida reise sihtkohta „{goal}”',
 	'card.noDeps': 'Sobivaid väljumisi pole',
 	'card.arrival': 'Saabumine',
+	'card.change': 'Ülekäik',
+	'card.xfer': 'Otseliine pole. Näitan variante ühe ülekäiguga (teine sõit sõiduplaani järgi).',
 	'card.pinned': 'Jälgin seda reisi',
 	'card.all': 'Kõik',
 	'card.noStops': 'Peatusi pole. Lisage need seadetes.',

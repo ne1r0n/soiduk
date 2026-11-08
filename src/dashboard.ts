@@ -1,4 +1,5 @@
 import type { Mode } from './api.ts';
+import { ensureGeo, nearStops, stopNameByCode } from './geo.ts';
 import { ensureGtfs, stopInfo } from './gtfs.ts';
 import { t } from './i18n.ts';
 import {
@@ -16,6 +17,7 @@ import { esc } from './util.ts';
 import { rowKey } from './watch.ts';
 
 const MAX_EXTRA_ROWS = 3;
+const XFER = { near: nearStops, name: stopNameByCode };
 const modeClass: Record<Mode, string> = { bus: 'bus', trol: 'trol', tram: 'tram', other: 'bus' };
 
 function urgency(leaveSec: number): string {
@@ -33,6 +35,12 @@ function delayTag(sec: number) {
 	if (m >= 1) return `<span class="delay late">+${m}</span>`;
 	if (m <= -1) return `<span class="delay early">${m}</span>`;
 	return '';
+}
+
+/** second line of a trip with a change: «⇄ Kopli · 🚶 2 мин → [33] 14:05» */
+function viaLine(v: NonNullable<NonNullable<Row['arrive']>['via']>): string {
+	const walk = v.walkSec ? ` · 🚶 ${Math.max(1, Math.round(v.walkSec / 60))} ${t('unit.min')}` : '';
+	return `<span class="via" title="${t('card.change')}">⇄ ${esc(v.stopName)}${walk} → <span class="badge mini ${modeClass[v.mode]}">${esc(v.route)}</span> ${fmtClock(v.depSec)}</span>`;
 }
 
 /** "выйти через 5 мин" / "выйти сейчас" */
@@ -53,6 +61,7 @@ function stopCard(
 	goal: GoalCfg | undefined,
 	idx: GtfsIndex | null,
 	elapsed: number,
+	transfers = false,
 ): { html: string; empty: boolean } {
 	const walk = stop.walkMin ?? loc.walkMin;
 	const one: LocationCfg = {
@@ -80,7 +89,13 @@ function stopCard(
 		);
 	}
 
-	const rows = buildRows(one, state.data, elapsed, 30, goal && idx ? { goal, idx } : undefined);
+	const rows = buildRows(
+		one,
+		state.data,
+		elapsed,
+		30,
+		goal && idx ? { goal, idx, transfers: transfers ? XFER : undefined } : undefined,
+	);
 	if (!rows.length) {
 		const r = shell(
 			`<p class="muted">${goal ? t('card.noGoal', { goal: esc(goal.name) }) : t('card.noDeps')}</p>`,
@@ -94,11 +109,12 @@ function stopCard(
 		.slice(0, 1 + MAX_EXTRA_ROWS)
 		.map(
 			(r) => `
-    <li data-act="pin" data-key="${rowKey(r)}" class="pinnable">
+    <li data-act="pin" data-key="${rowKey(r)}" class="pinnable${r.arrive?.via ? ' xfer' : ''}">
       ${badge(r)}
       <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="${t('card.arrival')}">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? `<span class="pin" title="${t('card.pinned')}">🔔</span>` : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
       <span class="in">${leaveText(r.leaveInSec)}</span>
+      ${r.arrive?.via ? viaLine(r.arrive.via) : ''}
     </li>`,
 		)
 		.join('');
@@ -130,9 +146,20 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 		idx = state.gtfs;
 	}
 	let cards = loc.stops.map((s) => stopCard(loc, s, goal, idx, elapsed));
+	let withChange = false;
+	if (goal && !cards.some((c) => !c.empty)) {
+		// no stop has a direct route: look for connections with one change (needs stop coordinates)
+		ensureGeo();
+		const alt = loc.stops.map((s) => stopCard(loc, s, goal, idx, elapsed, true));
+		if (alt.some((c) => !c.empty)) {
+			cards = alt;
+			withChange = true;
+		}
+	}
 	// towards a goal, hide stops on the wrong side of the road – unless that leaves nothing
 	if (goal && cards.some((c) => !c.empty)) cards = cards.filter((c) => !c.empty);
-	return wrap(cards.map((c) => c.html).join(''));
+	const hint = withChange ? `<p class="hint muted xfer-note">${t('card.xfer')}</p>` : '';
+	return wrap(hint + cards.map((c) => c.html).join(''));
 }
 
 export function dashboard(): string {
