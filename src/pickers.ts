@@ -20,6 +20,16 @@ import { routeSort } from './util.ts';
 
 const peekPending = new Set<number>();
 
+/**
+ * stops.txt lists every stop ever defined, including temporary ones and stops without any service
+ * (transport.tallinn.ee does not show them). Only stops that appear in the timetable are offered;
+ * if the timetable could not be loaded we can't tell, so nothing is hidden.
+ */
+function inService<T extends { id: string }>(all: T[]): T[] {
+	const served = state.gtfs?.routesByStop;
+	return served ? all.filter((s) => served.has(s.id)) : all;
+}
+
 /** lazily load live info for stops shown in the picker */
 function peek(ids: number[]) {
 	for (const id of ids) {
@@ -50,8 +60,9 @@ function centroid(pts: { la?: number; lo?: number }[]) {
 }
 
 export async function pickStop(loc: LocationCfg) {
-	const all = await loadStops();
+	const everyStop = await loadStops();
 	await ensureGtfs(); // directions come from the timetable when the live feed has nothing
+	const all = inService(everyStop);
 	const codeBySiri = new Map(all.map((s) => [s.s, s.id]));
 	openPicker({
 		all,
@@ -91,11 +102,11 @@ export async function pickStop(loc: LocationCfg) {
 }
 
 export async function pickGoalStop(loc: LocationCfg, goal: GoalCfg) {
-	const all = await loadStops();
+	const everyStop = await loadStops();
 	await ensureGtfs(); // routes at a stop help choosing the right side / the right stop
-	const goalStops = all.filter((s) => goal.stops.some((g) => g.code === s.id));
+	const goalStops = everyStop.filter((s) => goal.stops.some((g) => g.code === s.id));
 	openPicker({
-		all,
+		all: inService(everyStop),
 		goal: true,
 		taken: new Set(goalStops.map((s) => s.s)),
 		center: centroid(goalStops),
