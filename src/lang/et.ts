@@ -69,6 +69,12 @@ export const et: Record<Key, string> = {
 	'card.goalHint': 'Tahate teada, millal kohale jõuate? Lisage siht – koht, kuhu sõidate.',
 	'card.addGoal': '＋ Lisa siht',
 
+	'ob.demo': '👀 Vaata näidet',
+	'ob.demoFail': 'Näide pole praegu saadaval. Leidke peatus ise.',
+	'demo.name': 'Näide',
+	'demo.bar': 'See on näide reaalajas andmetega. Teie seaded jäävad puutumata.',
+	'demo.own': 'Seadista enda oma',
+
 	'pk.search': 'Otsi nime järgi (valikuline)',
 	'pk.geo': 'Minu asukoht',
 	'pk.close': 'Sulge',

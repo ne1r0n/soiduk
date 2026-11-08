@@ -1261,3 +1261,24 @@ main {
 	margin: 0 0 8px;
 	font-size: 0.9em;
 }
+
+/* demo: a strip above the example */
+.demo-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin: 0 0 12px;
+	padding: 10px 12px;
+	border: 1px dashed var(--line);
+	border-radius: 12px;
+	font-size: 0.9em;
+	color: var(--muted);
+}
+.demo-bar .btn {
+	flex: none;
+	padding: 8px 12px;
+}
+.ob-demo {
+	width: min(320px, 100%);
+}

@@ -13,6 +13,7 @@ import {
 } from './plan.ts';
 import { XFER } from './rows.ts';
 import { selectedGoal, state } from './state.ts';
+import { inDemo } from './store.ts';
 import type { GtfsIndex } from './trip.ts';
 import { esc } from './util.ts';
 import { rowKey } from './watch.ts';
@@ -161,15 +162,19 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 	// towards a goal, hide stops on the wrong side of the road – unless that leaves nothing
 	if (goal && cards.some((c) => !c.empty)) cards = cards.filter((c) => !c.empty);
 	const hint = withChange ? `<p class="hint muted xfer-note">${t('card.xfer')}</p>` : '';
-	const addGoal = goals.length
-		? ''
-		: `<div class="ob-goal"><p class="muted">${t('card.goalHint')}</p><button type="button" class="btn ghost" data-act="edit">${t('card.addGoal')}</button></div>`;
+	const addGoal =
+		goals.length || inDemo()
+			? ''
+			: `<div class="ob-goal"><p class="muted">${t('card.goalHint')}</p><button type="button" class="btn ghost" data-act="edit">${t('card.addGoal')}</button></div>`;
 	return wrap(hint + cards.map((c) => c.html).join('') + addGoal);
 }
 
 export function dashboard(): string {
 	const elapsed = state.fetchedAt ? (Date.now() - state.fetchedAt) / 1000 : 0;
 	const body = state.cfg.locations.map((l) => locationSection(l, elapsed)).join('');
+	const bar = inDemo()
+		? `<div class="demo-bar"><span>${t('demo.bar')}</span><button type="button" class="btn primary" data-act="wiz-leave-demo">${t('demo.own')}</button></div>`
+		: '';
 	return `
-    <main>${body}</main>`;
+    <main>${bar}${body}</main>`;
 }

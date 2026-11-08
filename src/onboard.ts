@@ -5,7 +5,8 @@ import { pickStop } from './pickers.ts';
 import type { LocationCfg } from './plan.ts';
 import { edit, persist, render, state } from './state.ts';
 import type { StopInfo } from './stops.ts';
-import { uid } from './store.ts';
+import { loadStops } from './stops.ts';
+import { setDemo, uid } from './store.ts';
 import { stopOverview } from './trip.ts';
 import { esc, routeSort } from './util.ts';
 
@@ -18,7 +19,7 @@ const wiz = {
 	stop: undefined as StopInfo | undefined,
 	walkMin: 5,
 	busy: false,
-	err: '' as '' | 'ob.geoFail' | 'ob.far',
+	err: '' as '' | 'ob.geoFail' | 'ob.far' | 'ob.demoFail',
 };
 
 const WALK_PRESETS = [2, 5, 10, 15];
@@ -63,6 +64,67 @@ export async function wizLocate() {
 
 export async function wizSearch() {
 	await pickStop(draft(), { onPick: onPicked });
+}
+
+/** a stop with several lines, one goal reached directly and one that takes a change (or a short walk) */
+const DEMO = { home: '07906-1', goals: [['02808-1', '02906-1'], ['03205-1']] };
+
+/** shows a ready place with live data; nothing of it is saved */
+export async function wizDemo() {
+	if (wiz.busy) return;
+	const all = await loadStops().catch(() => []);
+	const byCode = new Map(all.map((s) => [s.id, s]));
+	const home = byCode.get(DEMO.home);
+	if (!home) {
+		wiz.err = 'ob.demoFail';
+		return render();
+	}
+	const goals = DEMO.goals
+		.map((codes) => codes.map((c) => byCode.get(c)).filter((s): s is StopInfo => !!s))
+		.filter((g) => g.length)
+		.map((g, i) => ({
+			id: `demo${i}`,
+			name: g[0].n,
+			stops: g.map((s) => ({ code: s.id, name: s.n })),
+		}));
+	setDemo(true);
+	state.cfg = {
+		locations: [
+			{
+				id: 'demo',
+				name: t('demo.name'),
+				walkMin: 5,
+				stops: [
+					{
+						siriId: home.s,
+						code: home.id,
+						name: home.n,
+						walkMin: 5,
+						routes: [],
+						la: home.la,
+						lo: home.lo,
+						area: home.ar || undefined,
+						nb: home.nb,
+					},
+				],
+				goals,
+			},
+		],
+	};
+	state.view = 'dash';
+	render();
+	updateLive();
+	refresh();
+}
+
+/** leaves the demo for the real first step */
+export function wizLeaveDemo() {
+	setDemo(false);
+	state.cfg = { locations: [] };
+	state.view = 'start';
+	wiz.step = 'start';
+	render();
+	updateLive();
 }
 
 export function wizBack() {
@@ -115,6 +177,7 @@ function startStep(): string {
       <button type="button" class="btn primary" data-act="wiz-locate" ${wiz.busy ? 'disabled' : ''}>${wiz.busy ? t('ob.locating') : t('ob.locate')}</button>
       <button type="button" class="btn" data-act="wiz-search" ${wiz.busy ? 'disabled' : ''}>${t('ob.search')}</button>
     </div>
+    <button type="button" class="btn ghost ob-demo" data-act="wiz-demo" ${wiz.busy ? 'disabled' : ''}>${t('ob.demo')}</button>
     ${wiz.err ? `<p class="ob-err">${t(wiz.err)}</p>` : ''}
     <button type="button" class="linkish" data-act="import-file">${t('ob.import')}</button>`;
 }

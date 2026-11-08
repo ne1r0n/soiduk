@@ -2,7 +2,15 @@ import { offerImport, replaceConfig } from './backup.ts';
 import { refresh } from './data.ts';
 import { LANGS, type Lang, setLang, t } from './i18n.ts';
 import { updateLive } from './live.ts';
-import { wizBack, wizDone, wizLocate, wizSearch, wizWalk } from './onboard.ts';
+import {
+	wizBack,
+	wizDemo,
+	wizDone,
+	wizLeaveDemo,
+	wizLocate,
+	wizSearch,
+	wizWalk,
+} from './onboard.ts';
 import { closePicker } from './picker.ts';
 import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
@@ -93,6 +101,12 @@ async function onClick(e: MouseEvent) {
 			break;
 		case 'wiz-walk':
 			wizWalk(Number(btn.dataset.min));
+			break;
+		case 'wiz-demo':
+			await wizDemo();
+			break;
+		case 'wiz-leave-demo':
+			wizLeaveDemo();
 			break;
 		case 'wiz-back':
 			wizBack();

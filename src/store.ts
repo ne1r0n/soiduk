@@ -17,7 +17,15 @@ export function load(): Config {
 	return { locations: [] };
 }
 
+/** while the demo is shown nothing is written: the visitor's own settings stay untouched */
+let demoMode = false;
+export const inDemo = () => demoMode;
+export const setDemo = (on: boolean) => {
+	demoMode = on;
+};
+
 export function save(cfg: Config): void {
+	if (demoMode) return;
 	localStorage.setItem(KEY, JSON.stringify(cfg));
 }
 
@@ -91,6 +99,7 @@ export function loadSelection(): Record<string, string> {
 	}
 }
 export function saveSelection(sel: Record<string, string>): void {
+	if (demoMode) return;
 	localStorage.setItem(UI_KEY, JSON.stringify(sel));
 }
 

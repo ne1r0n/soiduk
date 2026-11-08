@@ -9,6 +9,7 @@ import { locationRows } from './rows.ts';
 import { loadShapes, roadBetween } from './shapes.ts';
 import { selectedGoal, state } from './state.ts';
 import { loadStops } from './stops.ts';
+import { inDemo } from './store.ts';
 import { esc } from './util.ts';
 import { rowKey } from './watch.ts';
 
@@ -208,7 +209,7 @@ export async function openTrip(loc: LocationCfg, key: string) {
       </div>
       ${j ? '<div id="tp-map"></div>' : `<p class="muted">${t('trip.noMap')}</p>`}
       ${steps(row, j)}
-      <button class="btn primary tp-bell" data-tp="watch">${bellLabel()}</button>
+      ${inDemo() ? '' : `<button class="btn primary tp-bell" data-tp="watch">${bellLabel()}</button>`}
     </div>`;
 	if (j) {
 		const el = document.getElementById('tp-map');

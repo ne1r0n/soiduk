@@ -70,6 +70,12 @@ export const en: Record<Key, string> = {
 	'card.goalHint': 'Want to know when you will arrive? Add a goal – the place you are going to.',
 	'card.addGoal': '＋ Add a goal',
 
+	'ob.demo': '👀 See an example',
+	'ob.demoFail': 'The example is unavailable right now. Find a stop yourself.',
+	'demo.name': 'Example',
+	'demo.bar': 'This is an example on live data. Your settings are untouched.',
+	'demo.own': 'Set up my own',
+
 	'pk.search': 'Search by name (optional)',
 	'pk.geo': 'My location',
 	'pk.close': 'Close',
