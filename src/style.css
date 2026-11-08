@@ -221,3 +221,4 @@ main { gap: 22px; }
 .gchip.bell.on { border-color: var(--accent); }
 .rows li.pinnable { cursor: pointer; }
 .pin { margin-left: 6px; font-size: 13px; }
+.head-right .dirs.plan { color: #f2b45a; }

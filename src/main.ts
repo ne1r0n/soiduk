@@ -5,7 +5,7 @@ import { load, loadPrev, loadSelection, save, savePrev, saveSelection, sanitize,
 import { decodeConfig, encodeConfig, slim } from './share.ts';
 import { KOFI_URL } from './config.ts';
 import { loadStops, type StopInfo } from './stops.ts';
-import { buildIndex, type GtfsIndex } from './trip.ts';
+import { buildIndex, scheduledDepartures, type GtfsIndex } from './trip.ts';
 import { loadWatch, pickRow, rowKey, saveWatch, watchNotice, WATCH_TTL_MS, type Watch } from './watch.ts';
 import { closePicker, openPicker, refreshPicker } from './picker.ts';
 
@@ -17,6 +17,8 @@ let view: 'dash' | 'edit' = cfg.locations.length ? 'dash' : 'edit';
 let data = new Map<number, StopDepartures>();
 let fetchedAt = 0;
 let failed = new Set<number>();
+/** stops whose live feed was empty, so the timetable is shown instead */
+let planned = new Set<number>();
 let loading = false;
 let lastOk = true;
 /** routes seen live at a stop – used for chips in the editor */
@@ -85,18 +87,29 @@ async function refresh() {
   const ids = [...new Set(cfg.locations.flatMap(l => l.stops.map(s => s.siriId)))];
   const next = new Map<number, StopDepartures>();
   const bad = new Set<number>();
+  const plan = new Set<number>();
+  const codeOf = new Map(cfg.locations.flatMap(l => l.stops).map(s => [s.siriId, s.code]));
   await Promise.all(ids.map(async id => {
     try {
-      const d = await fetchDepartures(id);
-      next.set(id, d);
+      let d = await fetchDepartures(id);
       remember(id, d);
+      // the live feed is empty (outage or no data): fall back to the timetable (today's calendar)
+      const code = codeOf.get(id);
+      if (!d.items.length && code) {
+        await ensureGtfs();
+        if (gtfs) {
+          d = { now: d.now, items: scheduledDepartures(gtfs, code, d.now).map(x => ({ mode: x.mode, route: x.route, expected: x.sec, scheduled: x.sec, dest: x.headsign })) };
+          plan.add(id);
+        }
+      }
+      next.set(id, d);
     } catch {
       bad.add(id);
       const old = data.get(id);
       if (old) next.set(id, { now: old.now + (Date.now() - fetchedAt) / 1000, items: old.items });
     }
   }));
-  data = next; failed = bad; fetchedAt = Date.now(); loading = false;
+  data = next; failed = bad; planned = plan; fetchedAt = Date.now(); loading = false;
   clearArrivalCache();
   lastOk = bad.size < Math.max(ids.length, 1);
   updateLive();
@@ -147,7 +160,7 @@ function stopCard(loc: LocationCfg, stop: StopCfg, goal: GoalCfg | undefined, id
   const stale = failed.has(stop.siriId) ? ' <span class="stale" title="Данные устарели">⚠</span>' : '';
   const head = `<header>
       <div class="stop-title"><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
-      <div class="head-right"><span class="walk">🚶 ${walk} мин${stale}</span><span class="dirs">отправление</span></div></header>`;
+      <div class="head-right"><span class="walk">🚶 ${walk} мин${stale}</span><span class="dirs${planned.has(stop.siriId) ? ' plan' : ''}" ${planned.has(stop.siriId) ? 'title="Онлайн-данных нет, показано расписание"' : ''}>${planned.has(stop.siriId) ? 'по расписанию' : 'отправление'}</span></div></header>`;
   const shell = (inner: string, cls = '') => ({ html: `<section class="card ${cls}">${head}${inner}</section>`, empty: false });
   if (!data.has(stop.siriId)) return shell(`<p class="muted">${loading || !fetchedAt ? 'Загрузка…' : 'Нет данных'}</p>`);
 

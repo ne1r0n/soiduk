@@ -5,7 +5,7 @@
  */
 
 export interface RawGtfs {
-  patterns: { r: string; h: string; s: string[]; o: number[] }[];
+  patterns: { r: string; m?: 'bus' | 'trol' | 'tram'; h: string; s: string[]; o: number[] }[];
   /** [patternIdx, startSec, serviceIdx] */
   trips: [number, number, number][];
   services: { d: string; a: string; b: string; x: string[]; y: string[] }[];
@@ -63,6 +63,35 @@ export function serviceActive(s: RawGtfs['services'][number], date: { ymd: strin
   if (s.y.includes(date.ymd)) return false;
   if (s.x.includes(date.ymd)) return true;
   return s.d[date.dow] === '1' && s.a <= date.ymd && date.ymd <= s.b;
+}
+
+export interface PlannedDeparture { route: string; mode: 'bus' | 'trol' | 'tram'; headsign: string; sec: number }
+
+/**
+ * Timetable departures from a stop in the window [nowSec - backSec, nowSec + horizonSec]
+ * (seconds from Tallinn midnight). Used when the live feed has nothing for the stop.
+ * Weekday/weekend/holiday calendars are respected via serviceActive.
+ */
+export function scheduledDepartures(
+  idx: GtfsIndex, code: string, nowSec: number, now = new Date(), horizonSec = 2 * 3600, backSec = 60,
+): PlannedDeparture[] {
+  const out: PlannedDeparture[] = [];
+  // service days whose trips can fall into the window: yesterday (after-midnight times), today, tomorrow
+  const days = [-1, 0, 1].map(d => ({ date: tallinnDate(now, d), shift: d * 86400 }));
+  for (const route of idx.routesByStop.get(code) ?? []) {
+    for (const { p, i } of idx.byRouteStop.get(`${route}|${code}`) ?? []) {
+      const pat = idx.raw.patterns[p];
+      if (i >= pat.s.length - 1) continue; // last stop: vehicles only arrive there
+      for (const [start, svc] of idx.tripsByPattern.get(p) ?? []) {
+        for (const { date, shift } of days) {
+          const sec = start + pat.o[i] + shift;
+          if (sec < nowSec - backSec || sec > nowSec + horizonSec) continue;
+          if (serviceActive(idx.raw.services[svc], date)) out.push({ route, mode: pat.m ?? 'bus', headsign: pat.h, sec });
+        }
+      }
+    }
+  }
+  return out.sort((a, b) => a.sec - b.sec);
 }
 
 /**

@@ -38,7 +38,10 @@ const read = async n => csv(await readFile(join(dir, n + '.txt'), 'utf8'));
 const sec = t => { const [h, m, s] = t.split(':').map(Number); return h * 3600 + m * 60 + s; };
 
 const stops = new Map((await read('stops')).map(s => [s.stop_id, s.stop_code]));
-const routes = new Map((await read('routes')).map(r => [r.route_id, r.route_short_name]));
+const routeRows = await read('routes');
+const routes = new Map(routeRows.map(r => [r.route_id, r.route_short_name]));
+// GTFS route_type: 900 tram, 800 trolleybus, otherwise bus
+const modes = new Map(routeRows.map(r => [r.route_id, r.route_type === '900' ? 'tram' : r.route_type === '800' ? 'trol' : 'bus']));
 const trips = new Map((await read('trips')).map(t => [t.trip_id, t]));
 
 const byTrip = new Map();
@@ -58,11 +61,12 @@ for (const [tid, sts] of byTrip) {
   const start = sec(sts[0].departure_time);
   const codes = sts.map(s => stops.get(s.stop_id));
   const offs = sts.map(s => sec(s.arrival_time) - start);
-  const key = routes.get(t.route_id) + '|' + t.trip_headsign + '|' + codes.join(',') + '|' + offs.join(',');
+  const mode = modes.get(t.route_id);
+  const key = mode + '|' + routes.get(t.route_id) + '|' + t.trip_headsign + '|' + codes.join(',') + '|' + offs.join(',');
   let p = patIdx.get(key);
   if (p === undefined) {
     p = patterns.length; patIdx.set(key, p);
-    patterns.push({ r: routes.get(t.route_id), h: t.trip_headsign, s: codes, o: offs });
+    patterns.push({ r: routes.get(t.route_id), m: mode, h: t.trip_headsign, s: codes, o: offs });
   }
   out.push([p, start, svc(t.service_id)]);
 }

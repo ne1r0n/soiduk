@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildIndex, findArrival, type RawGtfs } from './trip.ts';
+import { buildIndex, findArrival, scheduledDepartures, type RawGtfs } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
 const NOW = new Date('2026-11-09T10:00:00Z');
@@ -59,4 +59,21 @@ test('preferred goal stop later on the trip wins over an earlier goal stop', () 
 test('preferred stop not on the trip falls back to other goal stops', () => {
   const r = findArrival(idx, '41', 'A', 43200, new Set(['ROCCA1']), NOW, new Set(['NOWHERE']));
   assert.equal(r?.toCode, 'ROCCA1');
+});
+
+test('scheduledDepartures: weekday timetable within the window', () => {
+  const r = scheduledDepartures(idx, 'A', 43000, NOW, 1000);
+  assert.deepEqual(r.map(x => [x.route, x.sec, x.headsign]), [['41', 43200, 'Rocca']]);
+});
+
+test('scheduledDepartures: nothing on a weekend (different calendar)', () => {
+  const sunday = new Date('2026-11-08T10:00:00Z');
+  assert.deepEqual(scheduledDepartures(idx, 'A', 43000, sunday, 3600), []);
+});
+
+test('scheduledDepartures: skips the last stop and carries after-midnight trips of the previous day', () => {
+  assert.deepEqual(scheduledDepartures(idx, 'A', 43000, NOW, 3600).filter(x => x.headsign === 'Center'), []);
+  const tue = new Date('2026-11-10T00:10:00+02:00');
+  const r = scheduledDepartures(idx, 'A', 600, tue, 3600);
+  assert.deepEqual(r.map(x => x.sec), [1800]);
 });
