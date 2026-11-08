@@ -216,3 +216,8 @@ main { gap: 22px; }
 /* right side of a card header: walking time, and the caption of the times column below it */
 .head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .head-right .dirs { font-size: 12px; }
+
+/* watch (notification) */
+.gchip.bell.on { border-color: var(--accent); }
+.rows li.pinnable { cursor: pointer; }
+.pin { margin-left: 6px; font-size: 13px; }

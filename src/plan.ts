@@ -37,6 +37,7 @@ export interface LocationCfg {
 }
 
 export interface Row {
+  siriId: number;
   dep: Departure;
   stopName: string;
   /** seconds until the vehicle arrives */
@@ -81,7 +82,7 @@ export function buildRows(
       const inSec = dep.expected - d.now - elapsedSec;
       const leaveInSec = inSec - loc.walkMin * 60;
       if (leaveInSec < -graceSec) continue;
-      const row: Row = { dep, stopName: stop.name, inSec, leaveInSec, delaySec: dep.expected - dep.scheduled };
+      const row: Row = { siriId: stop.siriId, dep, stopName: stop.name, inSec, leaveInSec, delaySec: dep.expected - dep.scheduled };
       if (ctx && goalCodes) {
         if (!stop.code) continue;
         const key = `${ctx.goal.id}|${stop.code}|${dep.route}|${dep.scheduled}`;
