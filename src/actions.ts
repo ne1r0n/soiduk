@@ -7,6 +7,7 @@ import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
 import { persist, render, state } from './state.ts';
 import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
+import { moveItem } from './util.ts';
 
 const findLoc = (el: Element) =>
 	state.cfg.locations.find((l) => l.id === el.closest<HTMLElement>('[data-loc]')?.dataset.loc);
@@ -54,6 +55,24 @@ function importFile() {
 	inp.click();
 }
 
+/** ↑ / ↓ in the settings: reorders the location, stop or goal the button belongs to */
+function moveEntry(btn: HTMLElement, delta: number) {
+	const { cfg } = state;
+	const box = btn.closest<HTMLElement>('[data-goal],[data-stop],[data-loc]');
+	const loc = findLoc(btn);
+	if (!box || !loc) return;
+	if (box.dataset.goal) {
+		const i = (loc.goals ?? []).findIndex((g) => g.id === box.dataset.goal);
+		loc.goals = moveItem(loc.goals ?? [], i, delta);
+	} else if (box.dataset.stop) {
+		const i = loc.stops.findIndex((s) => s.siriId === Number(box.dataset.stop));
+		loc.stops = moveItem(loc.stops, i, delta);
+	} else {
+		cfg.locations = moveItem(cfg.locations, cfg.locations.indexOf(loc), delta);
+	}
+	persist();
+}
+
 async function onClick(e: MouseEvent) {
 	const t = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
 	if (!t) return;
@@ -87,6 +106,12 @@ async function onClick(e: MouseEvent) {
 				goals: [],
 			});
 			persist();
+			break;
+		case 'move-up':
+			moveEntry(t, -1);
+			break;
+		case 'move-down':
+			moveEntry(t, 1);
 			break;
 		case 'pin':
 			if (loc && t.dataset.key) toggleWatch(loc, t.dataset.key);

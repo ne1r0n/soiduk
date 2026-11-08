@@ -33,3 +33,13 @@ export function byId(id: string): HTMLElement {
 	if (!el) throw new Error(`#${id} missing in index.html`);
 	return el;
 }
+
+/** New array with the item at `from` moved by `delta` positions (clamped to the ends). */
+export function moveItem<T>(items: readonly T[], from: number, delta: number): T[] {
+	const to = Math.min(items.length - 1, Math.max(0, from + delta));
+	const next = [...items];
+	if (from < 0 || from >= items.length || to === from) return next;
+	const [it] = next.splice(from, 1);
+	next.splice(to, 0, it);
+	return next;
+}

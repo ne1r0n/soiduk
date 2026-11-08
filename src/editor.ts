@@ -5,11 +5,17 @@ import { knownRoutes, state } from './state.ts';
 import { loadPrev } from './store.ts';
 import { esc, routeSort } from './util.ts';
 
-function goalEditor(g: GoalCfg): string {
+/** ↑ ↓ buttons; the container (location, stop or goal) is found from the DOM on click */
+function moveButtons(index: number, count: number): string {
+	return `<span class="moves"><button type="button" class="icon move" data-act="move-up" aria-label="Выше" ${index === 0 ? 'disabled' : ''}>↑</button><button type="button" class="icon move" data-act="move-down" aria-label="Ниже" ${index === count - 1 ? 'disabled' : ''}>↓</button></span>`;
+}
+
+function goalEditor(g: GoalCfg, index: number, count: number): string {
 	return `
     <div class="stop" data-goal="${g.id}">
       <div class="stop-head">
         <input class="name" data-field="goal-name" value="${esc(g.name)}" placeholder="Название цели" />
+        ${moveButtons(index, count)}
         <button class="icon danger" data-act="del-goal" aria-label="Удалить цель">✕</button>
       </div>
       <div class="chips">
@@ -29,7 +35,7 @@ function goalEditor(g: GoalCfg): string {
     </div>`;
 }
 
-function stopEditor(s: StopCfg): string {
+function stopEditor(s: StopCfg, index: number, count: number): string {
 	const info = stopInfo(s);
 	const routes = [...new Set([...info.routes, ...s.routes])].sort(routeSort);
 	const chips = routes.length
@@ -51,6 +57,7 @@ function stopEditor(s: StopCfg): string {
 	return `
     <div class="stop" data-stop="${s.siriId}">
       <div class="stop-head"><b>${esc(s.name)}</b><span class="muted">#${s.siriId}</span>
+        ${moveButtons(index, count)}
         <button class="icon danger" data-act="del-stop" aria-label="Удалить остановку">✕</button></div>
       ${dests.length ? `<div class="dirs">→ ${dests.slice(0, 4).map(esc).join(' · ')}</div>` : ''}
       <label class="walk-edit">🚶 Пешком до этой остановки, мин
@@ -67,17 +74,18 @@ function stopEditor(s: StopCfg): string {
 export function editor(): string {
 	const locs = state.cfg.locations
 		.map(
-			(l) => `
+			(l, li, all) => `
     <section class="card edit" data-loc="${l.id}">
       <header>
         <input class="name" data-field="name" value="${esc(l.name)}" placeholder="Название (Дом, Работа…)" />
+        ${moveButtons(li, all.length)}
         <button class="icon danger" data-act="del-loc" aria-label="Удалить локацию">🗑</button>
       </header>
       <div class="sec-title">Остановки рядом</div>
-      ${l.stops.map((s) => stopEditor(s)).join('')}
+      ${l.stops.map((s, i) => stopEditor(s, i, l.stops.length)).join('')}
       <button class="btn ghost" data-act="add-stop">＋ Остановка</button>
       <div class="sec-title">Куда еду</div>
-      ${(l.goals ?? []).map((g) => goalEditor(g)).join('')}
+      ${(l.goals ?? []).map((g, i, gs) => goalEditor(g, i, gs.length)).join('')}
       <button class="btn ghost" data-act="add-goal">＋ Цель (например, торговый центр)</button>
     </section>`,
 		)
