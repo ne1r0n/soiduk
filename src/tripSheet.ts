@@ -85,13 +85,19 @@ function draw(el: HTMLElement, j: Journey): { m: L.Map; fit: () => void } {
 			});
 	};
 	let prevEnd: [number, number] | undefined;
-	j.legs.forEach((leg) => {
+	j.legs.forEach((leg, n) => {
 		const line = leg.codes.map(at).filter((p): p is [number, number] => !!p);
 		if (!line.length) return;
 		const color = cssVar(`--${leg.mode}`);
 		if (prevEnd)
 			L.polyline([prevEnd, line[0]], { color: '#94a3b8', weight: 3, dashArray: '2 7' }).addTo(m);
-		L.polyline(line, { color, weight: 5, opacity: 0.9 }).addTo(m);
+		// where the two rides share a stretch, the first one shows as a wide halo under the second
+		L.polyline(
+			line,
+			n === 0 && j.legs.length > 1
+				? { color, weight: 9, opacity: 0.4 }
+				: { color, weight: 4, opacity: 1 },
+		).addTo(m);
 		pts.push(...line);
 		prevEnd = line[line.length - 1];
 	});
@@ -99,11 +105,12 @@ function draw(el: HTMLElement, j: Journey): { m: L.Map; fit: () => void } {
 	const last = j.legs[j.legs.length - 1].codes.at(-1);
 	if (first) dot(first, cssVar('--ok'), true);
 	if (j.legs.length > 1) {
-		dot(j.legs[0].codes.at(-1) ?? '', '#e2e8f0', false, 'left');
-		// the opposite stop of the same name sits a few metres away: one dot is enough, the dashed walk shows the rest
+		// crossing the street: two stops of the same name – both are drawn, but labelled once
+		const alight = j.legs[0].codes.at(-1) ?? '';
 		const board = j.legs[1].codes[0];
-		if (stopNameByCode(board) !== stopNameByCode(j.legs[0].codes.at(-1) ?? ''))
-			dot(board, '#e2e8f0', false, 'right');
+		const same = stopNameByCode(board) === stopNameByCode(alight);
+		dot(alight, '#e2e8f0', false, same ? 'top' : 'left');
+		dot(board, '#e2e8f0', false, 'right', !same);
 	}
 	if (last) dot(last, cssVar('--soon'), true, j.legs.length > 1 ? 'right' : 'top');
 	const fit = () => {
