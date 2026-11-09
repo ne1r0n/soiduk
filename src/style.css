@@ -1304,6 +1304,3 @@ main {
 	flex: none;
 	padding: 8px 12px;
 }
-.ob-demo {
-	width: min(320px, 100%);
-}

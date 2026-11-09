@@ -176,8 +176,8 @@ function startStep(): string {
     <div class="ob-actions">
       <button type="button" class="btn primary" data-act="wiz-locate" ${wiz.busy ? 'disabled' : ''}>${wiz.busy ? t('ob.locating') : t('ob.locate')}</button>
       <button type="button" class="btn" data-act="wiz-search" ${wiz.busy ? 'disabled' : ''}>${t('ob.search')}</button>
+      <button type="button" class="btn" data-act="wiz-demo" ${wiz.busy ? 'disabled' : ''}>${t('ob.demo')}</button>
     </div>
-    <button type="button" class="btn ghost ob-demo" data-act="wiz-demo" ${wiz.busy ? 'disabled' : ''}>${t('ob.demo')}</button>
     ${wiz.err ? `<p class="ob-err">${t(wiz.err)}</p>` : ''}
     <button type="button" class="linkish" data-act="import-file">${t('ob.import')}</button>`;
 }
