@@ -16,16 +16,20 @@ import { rowKey } from './watch.ts';
 let root: HTMLElement | null = null;
 let map: L.Map | null = null;
 
+/** the bottom-sheet container, shared with the timetable sheet */
+export const sheetRoot = () => (root ??= document.getElementById('trip'));
+
 export function closeTrip() {
 	map?.remove();
 	map = null;
-	if (root) {
-		root.hidden = true;
-		root.innerHTML = '';
+	const el = sheetRoot();
+	if (el) {
+		el.hidden = true;
+		el.innerHTML = '';
 	}
 }
 
-export const tripOpen = () => map !== null || (root !== null && !root.hidden);
+export const tripOpen = () => map !== null || !(sheetRoot()?.hidden ?? true);
 
 const cssVar = (name: string) =>
 	getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#38bdf8';

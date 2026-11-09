@@ -17,6 +17,7 @@ import { encodeConfig, slim } from './share.ts';
 import { edit, persist, render, state, stopKey } from './state.ts';
 import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
 import { setTheme, type ThemePref } from './theme.ts';
+import { openTimetable } from './timetable.ts';
 import { openTrip } from './tripSheet.ts';
 import { moveItem } from './util.ts';
 
@@ -183,6 +184,11 @@ async function onClick(e: MouseEvent) {
 		case 'move-down':
 			moveEntry(btn, 1);
 			break;
+		case 'timetable': {
+			const stop = loc?.stops.find((x) => String(x.siriId) === btn.dataset.stop);
+			if (stop) openTimetable(stop);
+			break;
+		}
 		case 'trip':
 			if (loc && btn.dataset.key) openTrip(loc, btn.dataset.key);
 			break;

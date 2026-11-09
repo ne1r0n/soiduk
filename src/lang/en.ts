@@ -72,6 +72,9 @@ export const en: Record<Key, string> = {
 	'demo.bar': 'This is an example on live data. Your settings are untouched.',
 	'demo.own': 'Set up my own',
 
+	'tt.sub': '{day} · timetable',
+	'tt.empty': 'No scheduled trips here today',
+	'tt.open': 'Stop timetable',
 	'pk.search': 'Search by name (optional)',
 	'pk.geo': 'My location',
 	'pk.close': 'Close',

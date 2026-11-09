@@ -1309,3 +1309,63 @@ main {
 	flex: none;
 	padding: 8px 12px;
 }
+
+/* stop timetable sheet: hours like on a stop sign */
+.stop-title[data-act="timetable"] {
+	cursor: pointer;
+}
+.stop-title[data-act="timetable"] h2::after {
+	content: " ›";
+	opacity: 0.6;
+}
+.tt-sheet {
+	gap: 10px;
+}
+.tt-chips {
+	flex-wrap: wrap;
+	margin: 0;
+}
+.tt-table {
+	overflow-y: auto;
+	min-height: 120px;
+}
+.tt-row {
+	display: flex;
+	gap: 14px;
+	padding: 8px 2px;
+	border-top: 1px dashed var(--line);
+}
+.tt-row:first-child {
+	border-top: 0;
+}
+.tt-h {
+	flex: none;
+	width: 26px;
+	font-size: 17px;
+	font-variant-numeric: tabular-nums;
+}
+.tt-row.next .tt-h {
+	opacity: 0.55;
+}
+.tt-ms {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 14px;
+	font-size: 17px;
+	font-variant-numeric: tabular-nums;
+}
+.tt-m.past {
+	opacity: 0.35;
+}
+.tt-r {
+	margin-left: 2px;
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--bus);
+}
+.tt-r.trol {
+	color: var(--trol);
+}
+.tt-r.tram {
+	color: var(--tram);
+}

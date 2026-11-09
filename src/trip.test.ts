@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
 	buildIndex,
+	dayTimetable,
 	findArrival,
+	hourTable,
 	type RawGtfs,
 	scheduledDepartures,
 	stopOverview,
+	tallinnSec,
 } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
@@ -104,4 +107,29 @@ test('stopOverview: routes and destinations by timetable, terminus excluded', ()
 	assert.deepEqual(stopOverview(idx, 'A'), { routes: ['41'], dests: ['Rocca'] });
 	assert.deepEqual(stopOverview(idx, 'ROCCA2'), { routes: ['41'], dests: ['Center'] });
 	assert.deepEqual(stopOverview(idx, 'NOPE'), { routes: [], dests: [] });
+});
+
+test('dayTimetable: the weekday and weekend calendars give different days', () => {
+	const mon = dayTimetable(idx, 'A', NOW).map((x) => x.sec);
+	assert.deepEqual(mon, [43200, 45000, 86400 + 1800]);
+	const sun = new Date('2026-11-08T10:00:00Z');
+	assert.deepEqual(dayTimetable(idx, 'A', sun), []);
+});
+
+test('hourTable: groups by hour, after-midnight trips stay at the end, a route filter narrows', () => {
+	const all = dayTimetable(idx, 'A', NOW);
+	assert.deepEqual(
+		hourTable(all).map((r) => [r.hour, r.items.map((x) => x.sec % 3600)]),
+		[
+			[12, [0, 1800]],
+			[24, [1800]],
+		],
+	);
+	assert.deepEqual(hourTable(all, '99'), []);
+	assert.equal(hourTable(all, '41').length, 2);
+});
+
+test('tallinnSec: seconds since Tallinn midnight', () => {
+	assert.equal(tallinnSec(new Date('2026-11-09T10:00:00Z')), 12 * 3600);
+	assert.equal(tallinnSec(new Date('2026-07-09T10:00:00Z')), 13 * 3600);
 });

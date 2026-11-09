@@ -130,6 +130,45 @@ export function scheduledDepartures(
 	return out.sort((a, b) => a.sec - b.sec);
 }
 
+/** seconds since midnight, Tallinn time */
+export function tallinnSec(now = new Date()): number {
+	const p = new Intl.DateTimeFormat('en-GB', {
+		timeZone: 'Europe/Tallinn',
+		hourCycle: 'h23',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	}).formatToParts(now);
+	const n = (type: string) => Number(p.find((x) => x.type === type)?.value ?? 0);
+	return n('hour') * 3600 + n('minute') * 60 + n('second');
+}
+
+/** The whole timetable of a stop for today, from the start of the day to 02:00 of the next one. */
+export function dayTimetable(idx: GtfsIndex, code: string, now = new Date()): PlannedDeparture[] {
+	return scheduledDepartures(idx, code, 0, now, 26 * 3600, 0);
+}
+
+export interface HourRow {
+	/** 0..25; 24 and above are after midnight, still part of today's service day */
+	hour: number;
+	items: PlannedDeparture[];
+}
+
+/** Departures grouped by hour like on a stop sign; `route` narrows them down to one line. */
+export function hourTable(deps: PlannedDeparture[], route?: string): HourRow[] {
+	const rows = new Map<number, PlannedDeparture[]>();
+	for (const d of deps) {
+		if (route && d.route !== route) continue;
+		const h = Math.floor(d.sec / 3600);
+		const a = rows.get(h) ?? [];
+		a.push(d);
+		rows.set(h, a);
+	}
+	return [...rows]
+		.sort((a, b) => a[0] - b[0])
+		.map(([hour, items]) => ({ hour, items: items.sort((a, b) => a.sec - b.sec) }));
+}
+
 /**
  * The live feed's scheduled times differ from GTFS by up to a minute or so,
  * so trips are matched to the nearest GTFS time within this tolerance.

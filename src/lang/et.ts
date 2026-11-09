@@ -71,6 +71,9 @@ export const et: Record<Key, string> = {
 	'demo.bar': 'See on näide reaalajas andmetega. Teie seaded jäävad puutumata.',
 	'demo.own': 'Seadista enda oma',
 
+	'tt.sub': '{day} · sõiduplaan',
+	'tt.empty': 'Täna siin sõite plaanis ei ole',
+	'tt.open': 'Peatuse sõiduplaan',
 	'pk.search': 'Otsi nime järgi (valikuline)',
 	'pk.geo': 'Minu asukoht',
 	'pk.close': 'Sulge',

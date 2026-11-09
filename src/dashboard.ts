@@ -80,7 +80,7 @@ function stopCard(
 		: '';
 	const isPlanned = state.planned.has(stop.siriId);
 	const head = `<header>
-      <div class="stop-title"><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
+      <div class="stop-title"${stop.code ? ` data-act="timetable" data-stop="${stop.siriId}" role="button" aria-label="${t('tt.open')}"` : ''}><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
       <div class="head-right"><span class="walk">🚶 ${walk} ${t('unit.min')}${stale}</span><span class="dirs${isPlanned ? ' plan' : ''}" ${isPlanned ? `title="${t('card.planTitle')}"` : ''}>${isPlanned ? t('card.plan') : t('card.dep')}</span></div></header>`;
 	const shell = (inner: string, cls = '') => ({
 		html: `<section class="card ${cls}">${head}${inner}</section>`,
