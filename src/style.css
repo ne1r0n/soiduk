@@ -529,10 +529,10 @@ input:focus {
 	background: none;
 	border: 0;
 	color: var(--muted);
-	font-size: 26px;
-}
-.icon.plain {
-	font-size: 20px;
+	/* both are SVG centred in the same 40px box, so their centres coincide */
+	display: grid;
+	place-items: center;
+	padding: 0;
 }
 /* a refresh in progress: a dot blinks right after the first place title */
 body.refreshing main > .loc:first-of-type .loc-head h3::after {
