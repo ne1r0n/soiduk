@@ -17,10 +17,7 @@ export const et: Record<Key, string> = {
 	'w.stops': 'peatus|peatust',
 	'w.goals': 'eesmärk|eesmärki',
 
-	'live.updating': 'uuendan…',
 	'live.offline': 'ühendus puudub · andmed {age} s vanad',
-	'live.loading': 'laadin…',
-	'live.fresh': 'andmed on uuendatud',
 	'live.age': 'uuendatud {age} s tagasi',
 
 	'leave.now': 'välju kohe',

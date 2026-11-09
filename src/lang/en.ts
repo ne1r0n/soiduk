@@ -17,10 +17,7 @@ export const en: Record<Key, string> = {
 	'w.stops': 'stop|stops',
 	'w.goals': 'goal|goals',
 
-	'live.updating': 'updating…',
 	'live.offline': 'offline · data {age}s old',
-	'live.loading': 'loading…',
-	'live.fresh': 'data up to date',
 	'live.age': 'updated {age}s ago',
 
 	'leave.now': 'leave now',

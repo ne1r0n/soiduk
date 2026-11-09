@@ -17,10 +17,7 @@ export const ru = {
 	'w.stops': 'остановка|остановки|остановок',
 	'w.goals': 'цель|цели|целей',
 
-	'live.updating': 'обновляю…',
 	'live.offline': 'нет связи · данные {age} с назад',
-	'live.loading': 'загрузка…',
-	'live.fresh': 'данные обновлены',
 	'live.age': 'обновлено {age} с назад',
 
 	'leave.now': 'выйти сейчас',

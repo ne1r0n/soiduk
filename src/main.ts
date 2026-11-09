@@ -6,6 +6,7 @@ import { ensureGtfs } from './gtfs.ts';
 import { initLang, t } from './i18n.ts';
 import { updateLive } from './live.ts';
 import { registerServiceWorker, updateWatch } from './notify.ts';
+import { initPullToRefresh } from './pull.ts';
 import { renderApp } from './render.ts';
 import { decodeConfig } from './share.ts';
 import { render, setRenderer, state } from './state.ts';
@@ -15,6 +16,7 @@ import { byId } from './util.ts';
 const REFRESH_MS = 20_000;
 
 initTheme();
+initPullToRefresh();
 initLang();
 setRenderer(renderApp);
 setAfterRefresh(updateWatch);
