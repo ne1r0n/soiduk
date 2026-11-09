@@ -175,7 +175,7 @@ export function editor(): string {
 	return `
     <div class="edit-bar">
       <div class="top"><h1>${t('app.settings')}</h1>
-        <div class="actions"><button class="btn" data-act="done">${t('app.done')}</button></div></div>
+        <div class="actions"><button type="button" class="icon plain" data-act="done" aria-label="${t('app.done')}">✕</button></div></div>
       <div class="goalbar tabs" role="tablist">
         ${TABS.map((tab) => `<button type="button" role="tab" aria-selected="${edit.tab === tab.id}" class="gchip ${edit.tab === tab.id ? 'on' : ''}" data-act="tab" data-tab="${tab.id}">${t(tab.label)}</button>`).join('')}
       </div>

@@ -479,7 +479,7 @@ input:focus {
 .live {
 	/* floats over the right end of the place-title row instead of taking a row of its own */
 	position: absolute;
-	top: max(10px, calc(env(safe-area-inset-top) - 6px));
+	top: calc(max(16px, env(safe-area-inset-top)) - 2px);
 	left: 16px;
 	right: 16px;
 	max-width: 560px;
@@ -514,14 +514,16 @@ input:focus {
 	border: 0;
 	padding: 0;
 }
-.live .icon {
+.live .icon,
+.icon.plain {
 	background: none;
 	border: 0;
 	color: var(--muted);
+	font-size: 26px;
 }
 .live .dot {
-	width: 9px;
-	height: 9px;
+	width: 7px;
+	height: 7px;
 	border-radius: 50%;
 	background: var(--ok);
 	position: relative;
@@ -1013,7 +1015,8 @@ main {
 	border-bottom: 1px solid var(--line);
 }
 .edit-bar .top {
-	margin: 4px 0 12px;
+	/* the close button sits exactly where the gear was on the home screen */
+	margin: -2px 0 8px;
 }
 .edit-bar .goalbar {
 	margin: 0;
