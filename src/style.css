@@ -533,6 +533,8 @@ input:focus {
 	display: grid;
 	place-items: center;
 	padding: 0;
+	/* the 40px touch box sticks out so the glyph itself lines up with the right edge of the cards */
+	margin-right: -11px;
 }
 /* a refresh in progress: a dot blinks right after the first place title */
 body.refreshing .loc-head h3::after {
