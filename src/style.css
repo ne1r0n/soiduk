@@ -521,6 +521,9 @@ input:focus {
 	color: var(--muted);
 	font-size: 26px;
 }
+.icon.plain {
+	font-size: 20px;
+}
 .live .dot {
 	width: 7px;
 	height: 7px;
