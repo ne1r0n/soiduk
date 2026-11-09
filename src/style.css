@@ -475,9 +475,8 @@ input:focus {
 	cursor: default;
 }
 
-/* live indicator + toolbar (persistent element outside #app, so animations never restart) */
+/* gear + status (persistent element outside #app); floats over the right end of the title row */
 .live {
-	/* floats over the right end of the place-title row instead of taking a row of its own */
 	position: absolute;
 	top: calc(max(16px, env(safe-area-inset-top)) - 2px);
 	left: 16px;
@@ -487,7 +486,7 @@ input:focus {
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
-	gap: 4px;
+	gap: 2px;
 	font-size: 12px;
 	color: var(--muted);
 	pointer-events: none;
@@ -496,23 +495,34 @@ input:focus {
 .live > * {
 	pointer-events: auto;
 }
-.live[hidden] {
+.live[hidden],
+.live-msg[hidden] {
 	display: none;
 }
-.live #live-text:not(:empty) {
-	padding: 3px 8px;
+/* shown only when something is off: no connection, or the data is old; a tap retries */
+.live-msg {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 10px;
 	border-radius: 999px;
 	background: var(--card);
 	border: 1px solid var(--line);
+	color: var(--muted);
+	font: inherit;
 }
-.live .pulse {
-	width: 40px;
-	height: 40px;
-	display: grid;
-	place-items: center;
-	background: none;
-	border: 0;
-	padding: 0;
+.live-msg::before {
+	content: "";
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--soon);
+}
+.live-msg.error {
+	color: var(--now);
+}
+.live-msg.error::before {
+	background: var(--now);
 }
 .live .icon,
 .icon.plain {
@@ -524,54 +534,25 @@ input:focus {
 .icon.plain {
 	font-size: 20px;
 }
-.live .dot {
+/* a refresh in progress: a dot blinks right after the first place title */
+body.refreshing main > .loc:first-of-type .loc-head h3::after {
+	content: "";
+	display: inline-block;
 	width: 7px;
 	height: 7px;
+	margin-left: 8px;
+	vertical-align: middle;
 	border-radius: 50%;
-	background: var(--ok);
-	position: relative;
-	flex: none;
-}
-.live .dot::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	border-radius: 50%;
-	background: var(--ok);
-	animation: ping 1.8s ease-out infinite;
-}
-.live.error .dot,
-.live.error .dot::after {
-	background: var(--now);
-}
-.live.error #live-text {
-	color: var(--now);
-}
-.live.loading .dot {
 	background: var(--muted);
 	animation: blink 0.7s ease-in-out infinite alternate;
 }
-.live.loading .dot::after {
-	display: none;
-}
 @keyframes blink {
 	to {
-		opacity: 0.25;
+		opacity: 0.2;
 	}
 }
-@keyframes ping {
-	0% {
-		transform: scale(1);
-		opacity: 0.7;
-	}
-	80%,
-	100% {
-		transform: scale(3);
-		opacity: 0;
-	}
-}
-/* the first place title leaves room for the floating dot and gear */
-main > .loc:first-child .loc-head h3 {
+/* the first place title leaves room for the gear and the message */
+main > .loc:first-of-type .loc-head h3 {
 	flex: 0 1 calc(100% - 96px);
 	min-width: 0;
 }
@@ -579,7 +560,7 @@ main > .demo-bar {
 	margin-right: 48px;
 }
 @media (prefers-reduced-motion: reduce) {
-	.live .dot::after {
+	body.refreshing main > .loc:first-of-type .loc-head h3::after {
 		animation: none;
 	}
 }

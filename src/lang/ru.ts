@@ -4,7 +4,6 @@ export const ru = {
 	'app.done': 'Готово',
 	'tab.places': 'Места',
 	'tab.app': 'Приложение',
-	'aria.reload': 'Обновить',
 	'aria.settings': 'Настройки',
 
 	'unit.min': 'мин',

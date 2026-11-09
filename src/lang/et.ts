@@ -5,7 +5,6 @@ export const et: Record<Key, string> = {
 	'app.done': 'Valmis',
 	'tab.places': 'Kohad',
 	'tab.app': 'Rakendus',
-	'aria.reload': 'Värskenda',
 	'aria.settings': 'Seaded',
 
 	'unit.min': 'min',
