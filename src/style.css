@@ -535,7 +535,7 @@ input:focus {
 	padding: 0;
 }
 /* a refresh in progress: a dot blinks right after the first place title */
-body.refreshing main > .loc:first-of-type .loc-head h3::after {
+body.refreshing .loc-head h3::after {
 	content: "";
 	display: inline-block;
 	width: 7px;
@@ -552,15 +552,20 @@ body.refreshing main > .loc:first-of-type .loc-head h3::after {
 	}
 }
 /* the first place title leaves room for the gear and the message */
-main > .loc:first-of-type .loc-head h3 {
-	flex: 0 1 calc(100% - 96px);
+/* the goal chips always go under the title, in every place */
+.loc-head h3 {
+	flex: 1 0 100%;
 	min-width: 0;
+	box-sizing: border-box;
+}
+main > .loc:first-of-type .loc-head h3 {
+	padding-right: 96px;
 }
 main > .demo-bar {
 	margin-right: 48px;
 }
 @media (prefers-reduced-motion: reduce) {
-	body.refreshing main > .loc:first-of-type .loc-head h3::after {
+	body.refreshing .loc-head h3::after {
 		animation: none;
 	}
 }
