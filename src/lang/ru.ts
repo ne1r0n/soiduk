@@ -8,7 +8,6 @@ export const ru = {
 
 	'unit.min': 'мин',
 	'unit.h': 'ч',
-	'unit.s': 'с',
 	'unit.m': 'м',
 	'time.now': 'сейчас',
 

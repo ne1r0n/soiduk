@@ -36,7 +36,7 @@ async function closeNotice() {
 	for (const n of (await reg?.getNotifications({ tag: TAG })) ?? []) n.close();
 }
 
-export function stopWatch() {
+function stopWatch() {
 	state.watch = null;
 	saveWatch(null);
 	notified = { key: '', shown: false, text: '' };

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { type GtfsSource, packGtfs } from './gtfsPack.ts';
 import { dropRedundantChanges, type Row } from './plan.ts';
 import { findTransfer, makeNear } from './transfer.ts';
-import { buildIndex } from './trip.ts';
+import { buildIndex, stopsOf } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
 const NOW = new Date('2026-11-09T10:00:00Z');
@@ -39,7 +39,8 @@ test('connection at the same stop: waits for the next vehicle', () => {
 test('walking to a neighbouring stop is considered as a boarding point', () => {
 	const r = findTransfer(idx, '10', 'HOME', 12 * H, 0, goal, nearX, NOW);
 	assert.equal(r?.route, '20');
-	assert.equal(r?.boardCode, 'X2');
+	const second = r?.legs[1];
+	assert.equal(second && stopsOf(idx, second.p)[second.i], 'X2'); // boarded at the neighbour
 	assert.equal(r?.walkSec, 60);
 	assert.equal(r?.depSec, 12 * H + 20 * 60);
 	assert.equal(r?.sec, 12 * H + 35 * 60);

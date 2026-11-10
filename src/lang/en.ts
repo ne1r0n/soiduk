@@ -9,7 +9,6 @@ export const en: Record<Key, string> = {
 
 	'unit.min': 'min',
 	'unit.h': 'h',
-	'unit.s': 's',
 	'unit.m': 'm',
 	'time.now': 'now',
 

@@ -66,7 +66,7 @@ export interface Row {
 	};
 }
 
-export function matches(dep: Departure, stop: StopCfg): boolean {
+function matches(dep: Departure, stop: StopCfg): boolean {
 	if (stop.routes.length && !stop.routes.includes(dep.route)) return false;
 	return true;
 }

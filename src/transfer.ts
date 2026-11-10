@@ -24,8 +24,6 @@ export interface Near {
 export interface Transfer {
 	/** stop where the first vehicle is left (as the first leg reports it) */
 	viaCode: string;
-	/** stop where the second vehicle is boarded (viaCode itself or a neighbour) */
-	boardCode: string;
 	walkSec: number;
 	route: string;
 	mode: Vehicle;
@@ -42,13 +40,13 @@ export interface Transfer {
 }
 
 /** if walking from the first vehicle to the goal costs at most this much more than the second ride, walk */
-export const WALK_SLACK_SEC = 180;
+const WALK_SLACK_SEC = 180;
 
 /** minimum time to change vehicles at the same stop / after a walk */
-export const MIN_CHANGE_SEC = 120;
-export const MIN_CHANGE_AFTER_WALK_SEC = 60;
+const MIN_CHANGE_SEC = 120;
+const MIN_CHANGE_AFTER_WALK_SEC = 60;
 /** a longer wait than this is not a sensible connection */
-export const MAX_WAIT_SEC = 25 * 60;
+const MAX_WAIT_SEC = 25 * 60;
 
 interface Feeder {
 	p: number;
@@ -160,7 +158,6 @@ export function findTransfer(
 					if (bestWalk && sec >= bestWalk.sec) continue;
 					bestWalk = {
 						viaCode: via,
-						boardCode: o.code,
 						walkSec: o.walkSec,
 						route: '',
 						mode: 'bus',
@@ -186,7 +183,6 @@ export function findTransfer(
 								if (!serviceActive(idx.services[p2.t[n + 1]], d2)) continue;
 								best = {
 									viaCode: via,
-									boardCode: code,
 									walkSec,
 									route: p2.r,
 									mode: p2.m,

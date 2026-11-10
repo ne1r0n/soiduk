@@ -216,52 +216,6 @@ button {
 	color: var(--muted);
 }
 
-.hero {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-}
-.hero-main {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	min-width: 0;
-}
-.hero-text {
-	font-size: 22px;
-	font-weight: 650;
-	letter-spacing: -0.02em;
-	line-height: 1.15;
-}
-.hero-text b {
-	color: var(--accent);
-	font-variant-numeric: tabular-nums;
-}
-.card.now .hero-text {
-	color: var(--now);
-}
-.hero-sub {
-	font-size: 13px;
-	color: var(--muted);
-	margin-top: 3px;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.hero-arrive {
-	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-	font-size: 11px;
-	color: var(--muted);
-	flex: none;
-}
-.hero-arrive b {
-	font-size: 20px;
-	color: var(--text);
-	font-variant-numeric: tabular-nums;
-}
 .stale {
 	color: var(--soon);
 }
@@ -426,54 +380,6 @@ input:focus {
 	gap: 8px;
 }
 
-.sheet-bg {
-	position: fixed;
-	inset: 0;
-	background: var(--scrim);
-	z-index: 10;
-}
-.sheet {
-	position: fixed;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 11;
-	max-width: 560px;
-	margin: 0 auto;
-	background: var(--bg2);
-	border-top: 1px solid var(--line);
-	border-radius: 24px 24px 0 0;
-	padding: 14px 16px max(16px, env(safe-area-inset-bottom));
-	max-height: 80vh;
-	display: flex;
-	flex-direction: column;
-}
-.sheet-head {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 8px;
-}
-.results {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	overflow: auto;
-}
-.results li {
-	display: flex;
-	justify-content: space-between;
-	gap: 10px;
-	padding: 12px 4px;
-	border-bottom: 1px solid var(--line);
-	cursor: pointer;
-}
-.results li:active {
-	background: var(--card);
-}
-.results li.muted {
-	cursor: default;
-}
-
 /* gear + status (persistent element outside #app); floats over the right end of the title row */
 .live {
 	position: absolute;
@@ -552,13 +458,13 @@ body.refreshing .loc-head h3::after {
 		opacity: 0.2;
 	}
 }
-/* the first place title leaves room for the gear and the message */
 /* the goal chips always go under the title, in every place */
 .loc-head h3 {
 	flex: 1 0 100%;
 	min-width: 0;
 	box-sizing: border-box;
 }
+/* the first place title leaves room for the gear and the message */
 main > .loc:first-of-type .loc-head h3 {
 	padding-right: 96px;
 }
@@ -589,23 +495,6 @@ main > .demo-bar {
 	color: var(--bus);
 	text-decoration: none;
 	margin-left: 6px;
-}
-.results .r-main {
-	min-width: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-.results .r-sub {
-	font-size: 12px;
-}
-.results .r-side {
-	flex: none;
-	font-size: 13px;
-}
-.top.end {
-	justify-content: flex-end;
-	margin-top: 0;
 }
 
 /* goals */
