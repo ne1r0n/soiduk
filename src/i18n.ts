@@ -68,10 +68,17 @@ export function t(key: Key, params?: Record<string, string | number>): string {
 	return params ? s.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k] ?? '')) : s;
 }
 
+const pluralRules = new Map<Lang, Intl.PluralRules>();
+
 /** picks the word form for a count from a «one|few|many» entry */
 export function plural(key: Key, n: number): string {
 	const forms = t(key).split('|');
-	const idx = { one: 0, few: 1 }[new Intl.PluralRules(current).select(n) as string] ?? 2;
+	let rules = pluralRules.get(current);
+	if (!rules) {
+		rules = new Intl.PluralRules(current);
+		pluralRules.set(current, rules);
+	}
+	const idx = { one: 0, few: 1 }[rules.select(n) as string] ?? 2;
 	return forms[Math.min(idx, forms.length - 1)];
 }
 

@@ -1,6 +1,7 @@
-import { fetchDepartures } from './api.ts';
+import { batches, fetchDepartures } from './api.ts';
 import { ensureGtfs } from './gtfs.ts';
 import { isDefaultName } from './i18n.ts';
+import { loadMapLib } from './maps.ts';
 import { openPicker, refreshPicker } from './picker.ts';
 import type { GoalCfg, LocationCfg } from './plan.ts';
 import {
@@ -13,7 +14,7 @@ import {
 	state,
 	stopKey,
 } from './state.ts';
-import { distanceM, loadStops, type StopInfo } from './stops.ts';
+import { distanceM, loadStops, type StopInfo, stopCfg } from './stops.ts';
 import { saveSelection } from './store.ts';
 import { stopOverview } from './trip.ts';
 import { routeSort } from './util.ts';
@@ -32,16 +33,19 @@ function inService<T extends { id: string }>(all: T[]): T[] {
 
 /** lazily load live info for stops shown in the picker */
 function peek(ids: number[]) {
-	for (const id of ids) {
-		if (knownDests.has(id) || peekPending.has(id)) continue;
-		peekPending.add(id);
-		fetchDepartures(id)
-			.then((d) => remember(id, d))
-			.catch(() => {})
-			.finally(() => {
-				peekPending.delete(id);
+	const want = ids.filter((id) => !knownDests.has(id) && !peekPending.has(id));
+	for (const group of batches(want)) {
+		for (const id of group) peekPending.add(id);
+		fetchDepartures(group)
+			.then((live) => {
+				for (const [id, d] of live) remember(id, d);
+				// only when something was learned: redrawing after a failure would just ask again, in a loop
 				refreshPicker();
 				if (state.view === 'edit') scheduleRender();
+			})
+			.catch(() => {})
+			.finally(() => {
+				for (const id of group) peekPending.delete(id);
 			});
 	}
 }
@@ -71,8 +75,8 @@ export interface PickStopOpts {
 
 /** @returns false when a position was given but no stop is close to it (the map is not opened) */
 export async function pickStop(loc: LocationCfg, o: PickStopOpts = {}): Promise<boolean> {
-	const everyStop = await loadStops();
-	await ensureGtfs(); // directions come from the timetable when the live feed has nothing
+	loadMapLib().catch(() => {}); // the map script downloads while the stops and the timetable do
+	const [everyStop] = await Promise.all([loadStops(), ensureGtfs()]);
 	const all = inService(everyStop);
 	let preselect: StopInfo | undefined;
 	if (o.near) {
@@ -88,7 +92,7 @@ export async function pickStop(loc: LocationCfg, o: PickStopOpts = {}): Promise<
 		if (best > NEAR_M) return false;
 	}
 	const codeBySiri = new Map(all.map((s) => [s.s, s.id]));
-	openPicker({
+	await openPicker({
 		all,
 		goal: false,
 		taken: new Set(loc.stops.map((s) => s.siriId)),
@@ -107,20 +111,10 @@ export async function pickStop(loc: LocationCfg, o: PickStopOpts = {}): Promise<
 		peek,
 		onPick: (info) => {
 			if (o.onPick) return o.onPick(info);
-			loc.stops.push({
-				siriId: info.s,
-				code: info.id,
-				name: info.n,
-				walkMin: loc.stops.at(-1)?.walkMin ?? loc.walkMin,
-				routes: [],
-				la: info.la,
-				lo: info.lo,
-				area: info.ar || undefined,
-				nb: info.nb,
-			});
-			fetchDepartures(info.s)
-				.then((d) => {
-					remember(info.s, d);
+			loc.stops.push(stopCfg(info, loc.stops.at(-1)?.walkMin ?? loc.walkMin));
+			fetchDepartures([info.s])
+				.then((live) => {
+					for (const [id, d] of live) remember(id, d);
 					if (state.view === 'edit') render();
 				})
 				.catch(() => {});
@@ -132,10 +126,10 @@ export async function pickStop(loc: LocationCfg, o: PickStopOpts = {}): Promise<
 }
 
 export async function pickGoalStop(loc: LocationCfg, goal: GoalCfg) {
-	const everyStop = await loadStops();
-	await ensureGtfs(); // routes at a stop help choosing the right side / the right stop
+	loadMapLib().catch(() => {});
+	const [everyStop] = await Promise.all([loadStops(), ensureGtfs()]);
 	const goalStops = everyStop.filter((s) => goal.stops.some((g) => g.code === s.id));
-	openPicker({
+	await openPicker({
 		all: inService(everyStop),
 		goal: true,
 		taken: new Set(goalStops.map((s) => s.s)),

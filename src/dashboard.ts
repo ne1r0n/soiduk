@@ -19,6 +19,34 @@ import { esc } from './util.ts';
 import { rowKey } from './watch.ts';
 
 const MAX_EXTRA_ROWS = 3;
+
+// The clock. Nothing in the HTML of the dashboard changes as time passes: a countdown, and a card (its colour
+// says how soon to leave), is only marked with `data-t`, and `times` holds – in the order of the page – the
+// moment each of them counts down to. `tickDashboard` writes the texts and the colours from that: once a
+// second, and right after the HTML is put on the page. So fresh data that says the same replaces nothing.
+let times: number[] = [];
+let renderedAt = 0;
+/** when the rows themselves go out of date: a trip can no longer be caught, «at the stop» runs out */
+let rebuildAt = Infinity;
+const leaveAt = (r: Row) => renderedAt + r.leaveInSec * 1000;
+const LEVELS = ['now', 'soon', 'ok'];
+
+/** Writes the countdowns and the colours of the cards. @returns true when the rows have to be built anew. */
+export function tickDashboard(root: HTMLElement, now = Date.now()): boolean {
+	root.querySelectorAll<HTMLElement>('[data-t]').forEach((el, i) => {
+		const sec = (times[i] - now) / 1000;
+		const kind = el.dataset.t;
+		if (kind === 'card') {
+			const level = urgency(sec);
+			for (const name of LEVELS) el.classList.toggle(name, name === level);
+		} else {
+			const text = leaveText(sec, kind === 'stop');
+			if (el.textContent !== text) el.textContent = text;
+		}
+	});
+	return now >= rebuildAt;
+}
+
 const modeClass: Record<Mode, string> = { bus: 'bus', trol: 'trol', tram: 'tram', other: 'bus' };
 
 function urgency(leaveSec: number): string {
@@ -60,7 +88,7 @@ function stopCard(
 	idx: GtfsIndex | null,
 	elapsed: number,
 	transfers = false,
-): { html: string; empty: boolean } {
+): { html: string; empty: boolean; times: number[] } {
 	// already on the way or at the stop: the walk counts as 0 min, so every departure that has not left yet
 	// is shown, counted down to the departure itself
 	const here = atStop(loc, stop.siriId);
@@ -86,9 +114,11 @@ function stopCard(
 	const head = `<header>
       <div class="stop-title"${stop.code ? ` data-act="timetable" data-stop="${stop.siriId}" role="button" aria-label="${t('tt.open')}"` : ''}><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
       ${headRight}</header>`;
-	const shell = (inner: string, cls = '') => ({
-		html: `<section class="card ${cls}">${head}${inner}</section>`,
+	/** `clock`: what the card and its rows count down to, see `times` */
+	const shell = (inner: string, clock: number[] = []) => ({
+		html: `<section class="card"${clock.length ? ' data-t="card"' : ''}>${head}${inner}</section>`,
 		empty: false,
+		times: clock,
 	});
 	if (!state.data.has(stop.siriId)) {
 		return shell(
@@ -110,26 +140,28 @@ function stopCard(
 		return { ...r, empty: true };
 	}
 
-	const lvl = urgency(rows[0].leaveInSec);
+	// Include all rows: even a hidden departure can affect the direct/transfer choice when it expires.
+	for (const row of rows) rebuildAt = Math.min(rebuildAt, leaveAt(row) + 30_001);
 	const pinned = state.watch?.pin;
-	const list = rows
-		.slice(0, 1 + MAX_EXTRA_ROWS)
+	const shown = rows.slice(0, 1 + MAX_EXTRA_ROWS);
+	const list = shown
 		.map(
 			(r) => `
     <li data-act="trip" data-key="${rowKey(r)}" class="pinnable${r.arrive?.via ? ' xfer' : ''}">
       ${badge(r)}
       <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="${t('card.arrival')}">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? `<span class="pin" title="${t('card.pinned')}">🔔</span>` : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
-      <span class="in">${leaveText(r.leaveInSec, here)}</span>
+      <span class="in" data-t="${here ? 'stop' : 'walk'}"></span>
       ${r.arrive?.via ? viaLine(r.arrive.via) : ''}
     </li>`,
 		)
 		.join('');
-	return shell(`<ul class="rows">${list}</ul>`, lvl);
+	// the colour of the card follows its first row; then the countdown of each row
+	return shell(`<ul class="rows">${list}</ul>`, [leaveAt(rows[0]), ...shown.map(leaveAt)]);
 }
 
 /** A location groups the cards of its stops and owns the goal selector */
-function locationSection(loc: LocationCfg, elapsed: number): string {
+function locationSection(loc: LocationCfg, elapsed: number): { html: string; times: number[] } {
 	const goals = loc.goals ?? [];
 	const goal = selectedGoal(loc);
 	const bar = goals.length
@@ -139,8 +171,10 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
     </div>`
 		: '';
 	const head = `<div class="loc-head"><h3>${esc(loc.name)}</h3>${bar}</div>`;
-	const wrap = (inner: string) =>
-		`<section class="loc" data-loc="${loc.id}">${head}${inner}</section>`;
+	const wrap = (inner: string, clock: number[] = []) => ({
+		html: `<section class="loc" data-loc="${loc.id}">${head}${inner}</section>`,
+		times: clock,
+	});
 	const note = (msg: string) => wrap(`<section class="card"><p class="muted">${msg}</p></section>`);
 	if (!loc.stops.length) return note(t('card.noStops'));
 
@@ -170,15 +204,24 @@ function locationSection(loc: LocationCfg, elapsed: number): string {
 		goals.length || inDemo()
 			? ''
 			: `<div class="ob-goal"><p class="muted">${t('card.goalHint')}</p><button type="button" class="btn ghost" data-act="edit">${t('card.addGoal')}</button></div>`;
-	return wrap(hint + cards.map((c) => c.html).join('') + addGoal);
+	return wrap(
+		hint + cards.map((c) => c.html).join('') + addGoal,
+		cards.flatMap((c) => c.times),
+	);
 }
 
 export function dashboard(): string {
-	const elapsed = state.fetchedAt ? (Date.now() - state.fetchedAt) / 1000 : 0;
-	const body = state.cfg.locations.map((l) => locationSection(l, elapsed)).join('');
+	renderedAt = Date.now();
+	rebuildAt = Infinity;
+	for (const until of Object.values(state.atStop)) {
+		if (until > renderedAt) rebuildAt = Math.min(rebuildAt, until);
+	}
+	const elapsed = state.fetchedAt ? (renderedAt - state.fetchedAt) / 1000 : 0;
+	const places = state.cfg.locations.map((l) => locationSection(l, elapsed));
+	times = places.flatMap((p) => p.times);
 	const bar = inDemo()
 		? `<div class="demo-bar"><span>${t('demo.bar')}</span><button type="button" class="btn primary" data-act="wiz-leave-demo">${t('demo.own')}</button></div>`
 		: '';
 	return `
-    <main>${bar}${body}</main>`;
+    <main>${bar}${places.map((p) => p.html).join('')}</main>`;
 }

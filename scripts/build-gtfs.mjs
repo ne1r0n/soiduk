@@ -1,13 +1,16 @@
-// Downloads the Tallinn GTFS feed and writes a compact index public/gtfs.json
+// Downloads the Tallinn GTFS feed and writes a compact timetable public/data/gtfs.<hash>.json
 // used by the browser to answer: "if I board trip X at stop A, when do I reach stop B?"
 //
-// Trips are grouped into patterns (route + stop list + time offsets from the first stop),
-// so a pattern is stored once and every trip is just [pattern, startSec, service].
+// Trips are grouped into patterns (route + stop list + time offsets from the first stop): a pattern is
+// collected once and every trip is just [pattern, startSec, service]. src/gtfsPack.ts then writes it
+// compactly (stop lists are shared between patterns, times are stored as differences).
 
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { packGtfs, packShapes } from '../src/gtfsPack.ts';
+import { emit } from './lib/emit.mjs';
 
 const SRC = 'https://transport.tallinn.ee/data/gtfs.zip';
 const dir = await mkdtemp(join(tmpdir(), 'gtfs-'));
@@ -134,10 +137,11 @@ const svcOut = services.map((id) => {
 });
 
 out.sort((a, b) => a[1] - b[1]);
-const json = JSON.stringify({ patterns, trips: out, services: svcOut });
-await writeFile(new URL('../public/gtfs.json', import.meta.url), json);
+const json = JSON.stringify(packGtfs({ patterns, trips: out, services: svcOut }));
+// the date tells the user how fresh the timetable is (shown in the settings)
+const gtfsName = await emit('gtfs', json, { date: new Date().toISOString().slice(0, 10) });
 console.log(
-	`patterns=${patterns.length} trips=${out.length} services=${svcOut.length} size=${(json.length / 1e6).toFixed(2)}MB`,
+	`patterns=${patterns.length} trips=${out.length} services=${svcOut.length} size=${(json.length / 1e6).toFixed(2)}MB -> public/${gtfsName}`,
 );
 
 // ---- shapes: the real road geometry, for drawing routes on the map (loaded lazily by the trip sheet) ----
@@ -238,6 +242,8 @@ const pat = patterns.map((p, n) => {
 	});
 	return [shapeIdx.get(id), at];
 });
-const sj = JSON.stringify({ shapes, pat });
-await writeFile(new URL('../public/shapes.json', import.meta.url), sj);
-console.log(`shapes=${shapes.length} size=${(sj.length / 1e6).toFixed(2)}MB`);
+const sj = JSON.stringify(packShapes(shapes, pat));
+const shapesName = await emit('shapes', sj);
+console.log(
+	`shapes=${shapes.length} size=${(sj.length / 1e6).toFixed(2)}MB -> public/${shapesName}`,
+);

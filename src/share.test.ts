@@ -20,7 +20,6 @@ const cfg: Config = {
 					la: 59.4,
 					lo: 24.6,
 					area: 'x',
-					nb: ['a'],
 				},
 			],
 			goals: [

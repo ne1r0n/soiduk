@@ -189,7 +189,6 @@ button {
 	border: 1px solid var(--line);
 	border-radius: var(--r);
 	padding: 16px 16px 12px;
-	backdrop-filter: blur(14px);
 	box-shadow: var(--card-shadow);
 	--accent: var(--ok);
 }
@@ -947,6 +946,10 @@ main {
 }
 .about .version {
 	opacity: 0.7;
+}
+/* «timetable of 2026-11-10» moves to the next line as a whole */
+.about .version span {
+	white-space: nowrap;
 }
 
 /* destination + (arrival time at the goal) */

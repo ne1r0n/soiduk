@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { type GtfsSource, packGtfs } from './gtfsPack.ts';
 import { dropRedundantChanges, type Row } from './plan.ts';
 import { findTransfer, makeNear } from './transfer.ts';
-import { buildIndex, type RawGtfs } from './trip.ts';
+import { buildIndex } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
 const NOW = new Date('2026-11-09T10:00:00Z');
 const H = 3600;
 
 // 10: HOME -> X -> Y ; 20: X2 -> GOAL (X2 is a stop across the street from X); 30: Y -> GOAL
-const raw: RawGtfs = {
+const raw: GtfsSource = {
 	patterns: [
 		{ r: '10', h: 'Y', s: ['HOME', 'X', 'Y'], o: [0, 600, 1200] },
 		{ r: '20', h: 'Goal', s: ['X2', 'GOAL'], o: [0, 900] },
@@ -23,7 +24,7 @@ const raw: RawGtfs = {
 	],
 	services: [{ d: '0111110', a: '20260101', b: '20271231', x: [], y: [] }],
 };
-const idx = buildIndex(raw);
+const idx = buildIndex(packGtfs(raw));
 const goal = new Set(['GOAL']);
 const noNear = () => [];
 const nearX = (c: string) => (c === 'X' ? [{ code: 'X2', walkSec: 60 }] : []);

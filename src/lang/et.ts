@@ -144,6 +144,7 @@ export const et: Record<Key, string> = {
 	'ed.data': 'Andmed:',
 	'ed.mapBy': 'Kaart ©',
 	'ed.build': 'järk',
+	'ed.timetable': 'sõiduplaan seisuga',
 
 	'def.loc': 'Asukoht',
 	'def.goal': 'Sihtkoht',

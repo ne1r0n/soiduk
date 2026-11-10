@@ -1,7 +1,7 @@
 import type { Departure, StopDepartures } from './api.ts';
 import { t } from './i18n.ts';
 import { findTransfer, type Near } from './transfer.ts';
-import { findArrival, type GtfsIndex } from './trip.ts';
+import { findArrival, type GtfsIndex, tallinnDate } from './trip.ts';
 
 export interface StopCfg {
 	siriId: number;
@@ -17,8 +17,6 @@ export interface StopCfg {
 	la?: number;
 	lo?: number;
 	area?: string;
-	/** neighbouring stop names, for orientation */
-	nb?: string[];
 }
 
 /** A place you want to get to, e.g. a shopping centre with several nearby stops */
@@ -89,12 +87,60 @@ export interface GoalCtx {
 	};
 }
 
-const arrivalCache = new Map<string, ReturnType<typeof findArrival>>();
-const transferCache = new Map<string, ReturnType<typeof findTransfer>>();
+/**
+ * Remembers timetable lookups in two generations: what is not asked for between two `age()` calls is
+ * forgotten, so the cache follows what is on screen instead of growing all day.
+ */
+class Lookups<V> {
+	private cur = new Map<string, V>();
+	private old = new Map<string, V>();
+	get(key: string): V | undefined {
+		let v = this.cur.get(key);
+		if (v === undefined) {
+			v = this.old.get(key);
+			if (v !== undefined) this.cur.set(key, v);
+		}
+		return v;
+	}
+	set(key: string, v: V): void {
+		this.cur.set(key, v);
+	}
+	age(): void {
+		this.old = this.cur;
+		this.cur = new Map();
+	}
+	clear(): void {
+		this.cur.clear();
+		this.old.clear();
+	}
+}
+
+const arrivalCache = new Lookups<ReturnType<typeof findArrival>>();
+const transferCache = new Lookups<ReturnType<typeof findTransfer>>();
+/** the service day the cached lookups were made for */
+let cacheDay = '';
+
+/** forget every lookup: the settings, the timetable or the stop coordinates have changed */
 export const clearArrivalCache = () => {
 	arrivalCache.clear();
 	transferCache.clear();
 };
+
+/**
+ * Call after each refresh of the live data. A lookup depends on the timetable, the settings and the service
+ * day, not on the live data, so it stays valid: only what has left the screen is dropped – and everything
+ * when a new day begins in Tallinn (another calendar applies).
+ */
+export function ageArrivalCache(now = new Date()): void {
+	const day = tallinnDate(now).ymd;
+	if (day !== cacheDay) {
+		cacheDay = day;
+		clearArrivalCache();
+		return;
+	}
+	arrivalCache.age();
+	transferCache.age();
+}
 
 export function buildRows(
 	loc: LocationCfg,

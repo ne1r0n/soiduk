@@ -4,7 +4,15 @@
  * the arrival at X); the second leg is taken from the timetable.
  */
 
-import { type GtfsIndex, MATCH_TOLERANCE_SEC, serviceActive, tallinnDate } from './trip.ts';
+import type { Vehicle } from './gtfsPack.ts';
+import {
+	type GtfsIndex,
+	MATCH_TOLERANCE_SEC,
+	positions,
+	serviceActive,
+	stopsOf,
+	tallinnDate,
+} from './trip.ts';
 import { getOrCreate } from './util.ts';
 
 /** a stop reachable on foot from another one */
@@ -20,7 +28,7 @@ export interface Transfer {
 	boardCode: string;
 	walkSec: number;
 	route: string;
-	mode: 'bus' | 'trol' | 'tram';
+	mode: Vehicle;
 	headsign: string;
 	/** departure of the second vehicle, seconds in the frame of the live schedule */
 	depSec: number;
@@ -48,30 +56,51 @@ interface Feeder {
 	j: number;
 }
 
-const feederCache = new WeakMap<GtfsIndex, Map<string, Map<string, Feeder[]>>>();
+/** per goal: for every stop list, where a rider boarding at each position gets off (-1: never reaches the goal) */
+interface Feed {
+	alight: number[][];
+	/** stopCode -> boarding positions from which a trip reaches the goal without changing */
+	at: Map<string, Feeder[]>;
+}
 
-/** stopCode -> boarding positions from which a trip reaches the goal without changing */
-function feeders(
+const feedCache = new WeakMap<GtfsIndex, Map<string, Feed>>();
+
+function feedOf(
 	idx: GtfsIndex,
 	goalCodes: ReadonlySet<string>,
 	preferred?: ReadonlySet<string>,
-): Map<string, Feeder[]> {
+): Feed {
 	const key = `${[...goalCodes].sort().join(',')}|${[...(preferred ?? [])].sort().join(',')}`;
-	const perIdx = feederCache.get(idx) ?? new Map<string, Map<string, Feeder[]>>();
-	feederCache.set(idx, perIdx);
-	return getOrCreate(perIdx, key, () => {
-		const out = new Map<string, Feeder[]>();
-		idx.raw.patterns.forEach((pat, p) => {
+	const perIdx = feedCache.get(idx) ?? new Map<string, Feed>();
+	feedCache.set(idx, perIdx);
+	return getOrCreate(perIdx, key, () => ({
+		alight: idx.seqs.map((codes) => {
+			const out: number[] = new Array(codes.length);
 			let nextGoal = -1;
 			let nextPref = -1;
-			for (let k = pat.s.length - 1; k >= 0; k--) {
-				const j = nextPref >= 0 ? nextPref : nextGoal;
-				if (j >= 0) getOrCreate(out, pat.s[k], () => []).push({ p, i: k, j });
-				if (goalCodes.has(pat.s[k])) nextGoal = k;
-				if (preferred?.has(pat.s[k])) nextPref = k;
+			for (let k = codes.length - 1; k >= 0; k--) {
+				out[k] = nextPref >= 0 ? nextPref : nextGoal;
+				if (goalCodes.has(codes[k])) nextGoal = k;
+				if (preferred?.has(codes[k])) nextPref = k;
 			}
-		});
-		return out;
+			return out;
+		}),
+		at: new Map(),
+	}));
+}
+
+/**
+ * Boarding positions at `code` from which a trip reaches the goal without changing – in pattern order, the
+ * later position first where a pattern calls at the stop twice. Worked out per stop, on first request.
+ */
+function feeders(idx: GtfsIndex, feed: Feed, code: string): Feeder[] {
+	return getOrCreate(feed.at, code, () => {
+		const out: Feeder[] = [];
+		for (const { q, i } of idx.occurs.get(code) ?? []) {
+			const j = feed.alight[q][i];
+			if (j >= 0) for (const p of idx.patsOfSeq[q]) out.push({ p, i, j });
+		}
+		return out.sort((a, b) => a.p - b.p || b.i - a.i);
 	});
 }
 
@@ -93,9 +122,9 @@ export function findTransfer(
 	/** false for changing stops that lead away from the goal */
 	viaOk: (code: string) => boolean = () => true,
 ): Transfer | null {
-	const cands = idx.byRouteStop.get(`${route}|${fromCode}`);
-	if (!cands) return null;
-	const feed = feeders(idx, goalCodes, preferred);
+	const cands = positions(idx, route, fromCode);
+	if (!cands.length) return null;
+	const feed = feedOf(idx, goalCodes, preferred);
 	const first = [
 		{ date: tallinnDate(now, 0), t: schedSec },
 		{ date: tallinnDate(now, -1), t: schedSec + 86400 },
@@ -110,16 +139,18 @@ export function findTransfer(
 	let bestWalk: Transfer | null = null;
 	for (const { date, t } of first) {
 		for (const { p, i } of cands) {
-			const pat = idx.raw.patterns[p];
-			const matched = (idx.tripsByPattern.get(p) ?? []).some(
-				([start, svc]) =>
-					Math.abs(start + pat.o[i] - t) <= MATCH_TOLERANCE_SEC &&
-					serviceActive(idx.raw.services[svc], date),
-			);
+			const pat = idx.pats[p];
+			const stops = stopsOf(idx, p);
+			let matched = false;
+			for (let n = 0; n < pat.t.length && !matched; n += 2) {
+				matched =
+					Math.abs(pat.t[n] + pat.o[i] - t) <= MATCH_TOLERANCE_SEC &&
+					serviceActive(idx.services[pat.t[n + 1]], date);
+			}
 			if (!matched) continue;
-			for (let k = i + 1; k < pat.s.length; k++) {
+			for (let k = i + 1; k < stops.length; k++) {
 				const arrive = schedSec + (pat.o[k] - pat.o[i]) + delaySec;
-				const via = pat.s[k];
+				const via = stops[k];
 				if (!viaOk(via)) continue;
 				const options: Near[] = [{ code: via, walkSec: 0 }, ...near(via)];
 				// a goal stop within walking distance: no need to change for the sake of one more stop
@@ -143,24 +174,25 @@ export function findTransfer(
 				}
 				for (const { code, walkSec } of options) {
 					const ready = arrive + walkSec + (walkSec ? MIN_CHANGE_AFTER_WALK_SEC : MIN_CHANGE_SEC);
-					for (const f of feed.get(code) ?? []) {
-						const p2 = idx.raw.patterns[f.p];
-						for (const [start, svc] of idx.tripsByPattern.get(f.p) ?? []) {
+					for (const f of feeders(idx, feed, code)) {
+						const p2 = idx.pats[f.p];
+						for (let n = 0; n < p2.t.length; n += 2) {
+							const start = p2.t[n];
 							for (const { date: d2, off } of second) {
 								const dep = start + p2.o[f.i] - off;
 								if (dep < ready || dep > ready + MAX_WAIT_SEC) continue;
 								const sec = start + p2.o[f.j] - off;
 								if (best && sec >= best.sec) continue;
-								if (!serviceActive(idx.raw.services[svc], d2)) continue;
+								if (!serviceActive(idx.services[p2.t[n + 1]], d2)) continue;
 								best = {
 									viaCode: via,
 									boardCode: code,
 									walkSec,
 									route: p2.r,
-									mode: p2.m ?? 'bus',
+									mode: p2.m,
 									headsign: p2.h,
 									depSec: dep,
-									toCode: p2.s[f.j],
+									toCode: stopsOf(idx, f.p)[f.j],
 									sec,
 									legs: [
 										{ p, i, j: k },

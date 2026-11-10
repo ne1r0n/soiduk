@@ -3,7 +3,7 @@ import { getLang, t } from './i18n.ts';
 import type { StopCfg } from './plan.ts';
 import { state } from './state.ts';
 import { dayTimetable, hourTable, type PlannedDeparture, tallinnSec } from './trip.ts';
-import { closeTrip, sheetRoot } from './tripSheet.ts';
+import { closeTrip, sheetRoot, sheetTurn } from './tripSheet.ts';
 import { esc, routeSort } from './util.ts';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -41,8 +41,9 @@ export async function openTimetable(stop: StopCfg) {
 	const root = sheetRoot();
 	if (!root || !stop.code) return;
 	closeTrip();
+	const mine = sheetTurn();
 	await ensureGtfs();
-	if (!state.gtfs) return;
+	if (!state.gtfs || mine !== sheetTurn()) return; // no timetable, or something else was opened meanwhile
 	const now = new Date();
 	const nowSec = tallinnSec(now);
 	const deps = dayTimetable(state.gtfs, stop.code, now);

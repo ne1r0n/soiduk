@@ -45,7 +45,7 @@ export function updateLive() {
 			: age >= STALE_SEC
 				? t('live.age', { age })
 				: '';
-	msg.textContent = text;
+	if (msg.textContent !== text) msg.textContent = text;
 	msg.hidden = !text;
 	msg.classList.toggle('error', bad);
 }

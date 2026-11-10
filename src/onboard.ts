@@ -4,8 +4,7 @@ import { updateLive } from './live.ts';
 import { pickStop } from './pickers.ts';
 import type { LocationCfg } from './plan.ts';
 import { edit, persist, render, state } from './state.ts';
-import type { StopInfo } from './stops.ts';
-import { loadStops } from './stops.ts';
+import { loadStops, type StopInfo, stopCfg } from './stops.ts';
 import { setDemo, uid } from './store.ts';
 import { stopOverview } from './trip.ts';
 import { esc, routeSort } from './util.ts';
@@ -94,19 +93,7 @@ export async function wizDemo() {
 				id: 'demo',
 				name: t('demo.name'),
 				walkMin: 5,
-				stops: [
-					{
-						siriId: home.s,
-						code: home.id,
-						name: home.n,
-						walkMin: 5,
-						routes: [],
-						la: home.la,
-						lo: home.lo,
-						area: home.ar || undefined,
-						nb: home.nb,
-					},
-				],
+				stops: [stopCfg(home, 5)],
 				goals,
 			},
 		],
@@ -144,19 +131,7 @@ export function wizDone() {
 		id: uid(),
 		name: t('def.home'),
 		walkMin: wiz.walkMin,
-		stops: [
-			{
-				siriId: s.s,
-				code: s.id,
-				name: s.n,
-				walkMin: wiz.walkMin,
-				routes: [],
-				la: s.la,
-				lo: s.lo,
-				area: s.ar || undefined,
-				nb: s.nb,
-			},
-		],
+		stops: [stopCfg(s, wiz.walkMin)],
 		goals: [],
 	};
 	state.cfg.locations.push(loc);

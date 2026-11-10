@@ -2,7 +2,7 @@
 
 import type { GoalCfg, Row } from './plan.ts';
 import { findTransfer, type Near } from './transfer.ts';
-import { findArrival, findBoarding, type GtfsIndex } from './trip.ts';
+import { findArrival, findBoarding, type GtfsIndex, stopsOf } from './trip.ts';
 
 export interface Leg {
 	route: string;
@@ -24,9 +24,10 @@ export interface Journey {
 }
 
 const leg = (idx: GtfsIndex, p: number, i: number, j?: number): Leg => {
-	const pat = idx.raw.patterns[p];
-	const to = j ?? pat.s.length - 1;
-	return { route: pat.r, mode: pat.m ?? 'bus', codes: pat.s.slice(i, to + 1), p, i, j: to };
+	const pat = idx.pats[p];
+	const stops = stopsOf(idx, p);
+	const to = j ?? stops.length - 1;
+	return { route: pat.r, mode: pat.m, codes: stops.slice(i, to + 1), p, i, j: to };
 };
 
 /**

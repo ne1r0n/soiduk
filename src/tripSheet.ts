@@ -1,8 +1,9 @@
-import L from 'leaflet';
+import type L from 'leaflet';
 import { ensureGeo, nearStops, stopNameByCode, stopPos } from './geo.ts';
 import { ensureGtfs } from './gtfs.ts';
 import { plural, t } from './i18n.ts';
 import { type Journey, journeyOf } from './journey.ts';
+import { loadMapLib, type MapLib } from './maps.ts';
 import { toggleWatch } from './notify.ts';
 import { fmtClock, type LocationCfg, leaveText, type Row } from './plan.ts';
 import { locationRows } from './rows.ts';
@@ -15,11 +16,17 @@ import { rowKey } from './watch.ts';
 
 let root: HTMLElement | null = null;
 let map: L.Map | null = null;
+/** changes whenever a sheet is asked for or closed: a sheet still waiting for its data then stays shut */
+let turn = 0;
 
 /** the bottom-sheet container, shared with the timetable sheet */
 export const sheetRoot = () => (root ??= document.getElementById('trip'));
 
+/** take it before waiting for data and compare afterwards: if it changed, the sheet is no longer wanted */
+export const sheetTurn = () => turn;
+
 export function closeTrip() {
+	turn++;
 	map?.remove();
 	map = null;
 	const el = sheetRoot();
@@ -70,15 +77,12 @@ function steps(row: Row, j: Journey | null): string {
 }
 
 function draw(
+	{ L, tileMap }: MapLib,
 	el: HTMLElement,
 	j: Journey,
 	shapes: Awaited<ReturnType<typeof loadShapes>>,
 ): { m: L.Map; fit: () => void } {
-	const m = L.map(el, { zoomControl: false, attributionControl: true });
-	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-	}).addTo(m);
+	const m = tileMap(el);
 	const pts: L.LatLngExpression[] = [];
 	const at = (code: string) => {
 		const p = stopPos(code);
@@ -183,11 +187,17 @@ export async function openTrip(loc: LocationCfg, key: string) {
 	closeTrip();
 	root ??= document.getElementById('trip');
 	if (!root) return;
+	const mine = turn;
 	const goal = selectedGoal(loc);
-	await ensureGtfs();
+	// the map script downloads while the data does; without it (offline) the sheet opens with the steps only
 	ensureGeo();
-	await loadStops().catch(() => []);
-	const shapes = await loadShapes();
+	const [, , shapes, lib] = await Promise.all([
+		ensureGtfs(),
+		loadStops().catch(() => []),
+		loadShapes(),
+		loadMapLib().catch(() => null),
+	]);
+	if (mine !== turn) return; // closed, or something else was tapped, while the data was loading
 	const elapsed = state.fetchedAt ? (Date.now() - state.fetchedAt) / 1000 : 0;
 	const row = locationRows(loc, goal, elapsed).find((r) => rowKey(r) === key);
 	if (!row) return;
@@ -213,17 +223,18 @@ export async function openTrip(loc: LocationCfg, key: string) {
         <div class="tp-title"><b>${esc(dest)}</b><span class="muted">${esc(sub)}</span></div>
         <button class="icon" data-tp="close" aria-label="${t('trip.close')}">✕</button>
       </div>
-      ${j ? '<div id="tp-map"></div>' : `<p class="muted">${t('trip.noMap')}</p>`}
+      ${j ? (lib ? '<div id="tp-map"></div>' : '') : `<p class="muted">${t('trip.noMap')}</p>`}
       ${steps(row, j)}
       ${inDemo() ? '' : `<button class="btn primary tp-bell" data-tp="watch">${bellLabel()}</button>`}
     </div>`;
-	if (j) {
+	if (j && lib) {
 		const el = document.getElementById('tp-map');
 		if (el) {
-			const { m, fit } = draw(el, j, shapes);
+			const { m, fit } = draw(lib, el, j, shapes);
 			map = m;
 			// the sheet has just been laid out: re-measure, then fit the route into the real size
 			setTimeout(() => {
+				if (map !== m) return; // closed meanwhile
 				m.invalidateSize();
 				fit();
 			}, 50);

@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { type GtfsSource, packGtfs } from './gtfsPack.ts';
 import {
 	buildIndex,
 	dayTimetable,
 	findArrival,
+	findBoarding,
 	hourTable,
-	type RawGtfs,
+	positions,
 	scheduledDepartures,
 	stopOverview,
+	tallinnDate,
 	tallinnSec,
 } from './trip.ts';
 
 // Monday 2026-11-09 12:00 Tallinn
 const NOW = new Date('2026-11-09T10:00:00Z');
 
-const raw: RawGtfs = {
+const raw: GtfsSource = {
 	patterns: [
 		{ r: '41', h: 'Rocca', s: ['A', 'B', 'ROCCA1', 'ROCCA2'], o: [0, 300, 900, 960] },
 		{ r: '41', h: 'Center', s: ['ROCCA2', 'B', 'A'], o: [0, 60, 600] },
@@ -27,7 +30,7 @@ const raw: RawGtfs = {
 	],
 	services: [{ d: '0111110', a: '20260101', b: '20271231', x: [], y: ['20260110'] }],
 };
-const idx = buildIndex(raw);
+const idx = buildIndex(packGtfs(raw));
 
 test('finds arrival at goal stop', () => {
 	const r = findArrival(idx, '41', 'A', 43200, new Set(['ROCCA1', 'ROCCA2']), NOW);
@@ -132,4 +135,30 @@ test('hourTable: groups by hour, after-midnight trips stay at the end, a route f
 test('tallinnSec: seconds since Tallinn midnight', () => {
 	assert.equal(tallinnSec(new Date('2026-11-09T10:00:00Z')), 12 * 3600);
 	assert.equal(tallinnSec(new Date('2026-07-09T10:00:00Z')), 13 * 3600);
+});
+
+test('tallinnDate: the calendar day in Tallinn, shifted by whole days', () => {
+	// 2026-11-09 22:40 UTC is already Tuesday the 10th in Tallinn
+	const late = new Date('2026-11-09T22:40:00Z');
+	assert.deepEqual(tallinnDate(late), { ymd: '20261110', dow: 2 });
+	assert.deepEqual(tallinnDate(late, -1), { ymd: '20261109', dow: 1 });
+	assert.deepEqual(tallinnDate(new Date('2026-12-31T21:59:00Z'), 1), { ymd: '20270101', dow: 5 });
+	assert.deepEqual(tallinnDate(new Date('2026-07-01T20:59:59Z')), { ymd: '20260701', dow: 3 });
+});
+
+test('findBoarding: the pattern of a live departure; the last stop cannot be boarded', () => {
+	assert.deepEqual(findBoarding(idx, '41', 'B', 43200 + 300 + 40, NOW), { p: 0, i: 1 });
+	assert.deepEqual(findBoarding(idx, '41', 'B', 43200 + 60, NOW), { p: 1, i: 1 });
+	assert.equal(findBoarding(idx, '41', 'A', 43200 + 600, NOW), null, 'A is where pattern 1 ends');
+	assert.equal(findBoarding(idx, '99', 'A', 43200, NOW), null);
+});
+
+test('positions: where a stop is inside the patterns of a route, in pattern order', () => {
+	assert.deepEqual(positions(idx, '41', 'B'), [
+		{ p: 0, i: 1 },
+		{ p: 1, i: 1 },
+	]);
+	assert.deepEqual(positions(idx, '41', 'ROCCA1'), [{ p: 0, i: 2 }]);
+	assert.deepEqual(positions(idx, '41', 'NOPE'), []);
+	assert.deepEqual(positions(idx, '7', 'B'), []);
 });

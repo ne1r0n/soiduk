@@ -1,19 +1,19 @@
+import { loadData } from './datafiles.ts';
+import type { RawGtfs } from './gtfsPack.ts';
 import { clearArrivalCache, type StopCfg } from './plan.ts';
 import { knownDests, knownRoutes, render, state } from './state.ts';
 import { buildIndex, stopOverview } from './trip.ts';
 import { routeSort } from './util.ts';
 
 let gtfsPromise: Promise<void> | null = null;
+let retryAt = 0;
 
 /** loads the timetable once; resolves when it is ready (or failed – see state.gtfsState) */
 export function ensureGtfs(): Promise<void> {
 	if (gtfsPromise) return gtfsPromise;
+	if (Date.now() < retryAt) return Promise.resolve();
 	state.gtfsState = 'loading';
-	gtfsPromise = fetch(`${import.meta.env.BASE_URL}gtfs.json`)
-		.then((r) => {
-			if (!r.ok) throw new Error(String(r.status));
-			return r.json();
-		})
+	gtfsPromise = loadData<RawGtfs>('gtfs')
 		.then((raw) => {
 			state.gtfs = buildIndex(raw);
 			state.gtfsState = 'idle';
@@ -21,6 +21,8 @@ export function ensureGtfs(): Promise<void> {
 			render();
 		})
 		.catch(() => {
+			gtfsPromise = null;
+			retryAt = Date.now() + 20_000;
 			state.gtfsState = 'error';
 			render();
 		});

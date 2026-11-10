@@ -61,7 +61,6 @@ export function sanitize(x: unknown): Config {
 							la: num(s.la),
 							lo: num(s.lo),
 							area: str(s.area),
-							nb: Array.isArray(s.nb) ? s.nb.map(String) : undefined,
 						};
 					})
 					.filter((s) => Number.isFinite(s.siriId)),

@@ -7,12 +7,12 @@ import { type Config, sanitize } from './store.ts';
  * CompressionStream is unavailable.
  */
 
-/** Drop data that is re-derived from stops.json on load (position, area, neighbours) */
+/** Drop data that is re-derived from the list of stops on load (position, area) */
 export function slim(cfg: Config): Config {
 	return {
 		locations: cfg.locations.map((l) => ({
 			...l,
-			stops: l.stops.map(({ la, lo, area, nb, ...keep }) => keep),
+			stops: l.stops.map(({ la, lo, area, ...keep }) => keep),
 		})),
 	};
 }

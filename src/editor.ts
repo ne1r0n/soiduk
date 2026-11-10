@@ -1,9 +1,10 @@
 import { APP_URL, KOFI_URL } from './config.ts';
+import { dataDate, whenDataDated } from './datafiles.ts';
 import { stopInfo } from './gtfs.ts';
 import { getLang, LANG_NAMES, LANGS, plural, t } from './i18n.ts';
 import type { GoalCfg, LocationCfg, StopCfg } from './plan.ts';
 import qrSvg from './qr.svg?raw';
-import { edit, knownRoutes, state, stopKey } from './state.ts';
+import { edit, knownRoutes, render, state, stopKey } from './state.ts';
 import { loadPrev } from './store.ts';
 import { loadTheme, THEMES } from './theme.ts';
 import { esc, routeSort } from './util.ts';
@@ -137,6 +138,9 @@ function placesTab(): string {
 
 function appTab(): string {
 	const theme = loadTheme();
+	// the code is dated by its commit; the timetable is refreshed every night and has a date of its own
+	const dated = dataDate();
+	if (dated === undefined) whenDataDated(() => state.view === 'edit' && render());
 	return `
       <div class="sec-title first">${t('ed.language')}</div>
       <div class="goalbar">
@@ -162,7 +166,7 @@ function appTab(): string {
       <footer class="about">
         ${KOFI_URL ? `<a class="kofi" href="${esc(KOFI_URL)}" target="_blank" rel="noopener">${t('ed.kofi')}</a>` : ''}
         <p class="muted">${t('ed.data')} <a href="https://transport.tallinn.ee" target="_blank" rel="noopener">transport.tallinn.ee</a> · ${t('ed.mapBy')} <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></p>
-        <p class="muted version">Sõiduk v${__APP_VERSION__} · <a href="https://github.com/ne1r0n/soiduk" target="_blank" rel="noopener">GitHub</a> · ${t('ed.build')} ${__APP_COMMIT__}, ${__APP_BUILT__}</p>
+        <p class="muted version">Sõiduk v${__APP_VERSION__} · <a href="https://github.com/ne1r0n/soiduk" target="_blank" rel="noopener">GitHub</a> · ${t('ed.build')} ${__APP_COMMIT__}, ${__APP_BUILT__}${dated ? ` · <span>${t('ed.timetable')} ${esc(dated)}</span>` : ''}</p>
       </footer>`;
 }
 

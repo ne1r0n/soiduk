@@ -1,22 +1,52 @@
+import { loadData } from './datafiles.ts';
+import type { RawStops } from './gtfsPack.ts';
+import type { StopCfg } from './plan.ts';
+
 export interface StopInfo {
 	s: number; // SiriID
 	n: string; // name
-	st: string; // street
 	la: number;
 	lo: number;
 	ar: string; // area / municipality
-	nb: string[]; // names of neighbouring stops
 	id: string; // GTFS stop_code
 }
 
 let cache: Promise<StopInfo[]> | null = null;
 
+/** the downloaded columns (see gtfsPack.ts) as one object per stop */
+export function decodeStops(raw: RawStops): StopInfo[] {
+	return raw.s.map((s, k) => ({
+		s,
+		id: raw.id[k],
+		la: raw.la[k] / 1e5,
+		lo: raw.lo[k] / 1e5,
+		n: raw.names[raw.n[k]],
+		ar: raw.areas[raw.ar[k]],
+	}));
+}
+
 export function loadStops(): Promise<StopInfo[]> {
-	cache ??= fetch(`${import.meta.env.BASE_URL}stops.json`).then((r) => {
-		if (!r.ok) throw new Error('stops.json not found – run `npm run stops`');
-		return r.json();
-	});
+	cache ??= loadData<RawStops>('stops')
+		.then(decodeStops)
+		.catch((err: unknown) => {
+			cache = null; // try again next time (run `npm run stops` if the file was never generated)
+			throw err;
+		});
 	return cache;
+}
+
+/** the settings entry of a stop picked from the list */
+export function stopCfg(info: StopInfo, walkMin: number): StopCfg {
+	return {
+		siriId: info.s,
+		code: info.id,
+		name: info.n,
+		walkMin,
+		routes: [],
+		la: info.la,
+		lo: info.lo,
+		area: info.ar || undefined,
+	};
 }
 
 export function distanceM(aLa: number, aLo: number, bLa: number, bLo: number): number {
@@ -27,23 +57,4 @@ export function distanceM(aLa: number, aLo: number, bLa: number, bLo: number): n
 	const h =
 		Math.sin(dLa / 2) ** 2 + Math.cos(aLa * rad) * Math.cos(bLa * rad) * Math.sin(dLo / 2) ** 2;
 	return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-export function searchStops(
-	all: StopInfo[],
-	q: string,
-	pos?: { la: number; lo: number },
-	limit = 25,
-	exclude?: Set<number>,
-): (StopInfo & { dist?: number })[] {
-	const query = q.trim().toLowerCase();
-	let res = (exclude?.size ? all.filter((s) => !exclude.has(s.s)) : all).map((s) => ({
-		...s,
-		dist: pos ? distanceM(pos.la, pos.lo, s.la, s.lo) : undefined,
-	}));
-	if (query) res = res.filter((s) => `${s.n} ${s.st} ${s.ar}`.toLowerCase().includes(query));
-	else if (!pos) return [];
-	if (pos) res.sort((a, b) => a.dist! - b.dist!);
-	else res.sort((a, b) => a.n.localeCompare(b.n));
-	return res.slice(0, limit);
 }

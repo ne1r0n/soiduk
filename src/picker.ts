@@ -1,7 +1,8 @@
-import L from 'leaflet';
+import type L from 'leaflet';
 import { t } from './i18n.ts';
-import 'leaflet/dist/leaflet.css';
+import { loadMapLib, type MapLib } from './maps.ts';
 import { distanceM, type StopInfo } from './stops.ts';
+import { esc } from './util.ts';
 
 export interface PickerOpts {
 	all: StopInfo[];
@@ -21,24 +22,25 @@ export interface PickerOpts {
 
 const TALLINN = { la: 59.437, lo: 24.745 };
 const MIN_ZOOM_STOPS = 14;
-const esc = (s: string) =>
-	s.replace(
-		/[&<>"']/g,
-		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
-	);
+/** live info for the listed stops is asked for once the map or the search field has come to rest */
+const PEEK_DELAY_MS = 250;
 
 let root: HTMLElement | null = null;
+let peekTimer: ReturnType<typeof setTimeout> | undefined;
 let st: {
 	opts: PickerOpts;
+	lib: MapLib;
 	map: L.Map;
 	layer: L.LayerGroup;
 	q: string;
 	sel?: StopInfo;
 	visible: StopInfo[];
+	markers: Map<number, { marker: L.CircleMarker; style: string }>;
 } | null = null;
 
-export function openPicker(opts: PickerOpts) {
-	closePicker();
+export async function openPicker(opts: PickerOpts) {
+	const lib = await loadMapLib();
+	closePicker(); // after the wait: of two quick calls the later one wins
 	root ??= document.getElementById('picker')!;
 	root.hidden = false;
 	root.innerHTML = `
@@ -54,27 +56,23 @@ export function openPicker(opts: PickerOpts) {
       <ul id="pk-list"></ul>
     </div>`;
 	const c = opts.center ?? TALLINN;
-	const map = L.map('pk-map', { zoomControl: false, attributionControl: true }).setView(
-		[c.la, c.lo],
-		opts.center ? 17 : 14,
-	);
+	const { L } = lib;
+	const map = lib.tileMap('pk-map').setView([c.la, c.lo], opts.center ? 17 : 14);
 	L.control.zoom({ position: 'topright' }).addTo(map);
-	// plain OSM tiles (no API key); the dark look comes from a CSS filter on .leaflet-tile-pane
-	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 19,
-		attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-	}).addTo(map);
 	const layer = L.layerGroup().addTo(map);
-	st = { opts, map, layer, q: '', visible: [], sel: opts.preselect };
+	st = { opts, lib, map, layer, q: '', visible: [], sel: opts.preselect, markers: new Map() };
 	if (opts.preselect) opts.peek([opts.preselect.s]);
 	map.on('moveend', redraw);
 	redraw();
-	// the map needs a size recalculation once the sheet has been laid out
-	setTimeout(() => map.invalidateSize(), 50);
+	// the map needs a size recalculation once the sheet has been laid out (unless it is closed by then)
+	setTimeout(() => {
+		if (st?.map === map) map.invalidateSize();
+	}, 50);
 }
 
 export function closePicker() {
 	if (!st) return;
+	clearTimeout(peekTimer);
 	st.map.remove();
 	st = null;
 	if (root) {
@@ -82,8 +80,6 @@ export function closePicker() {
 		root.innerHTML = '';
 	}
 }
-
-export const pickerOpen = () => st !== null;
 
 /** call when live info for some stop arrived */
 export function refreshPicker() {
@@ -96,7 +92,7 @@ export function refreshPicker() {
 function redraw() {
 	if (!st) return;
 	const { map, layer, opts } = st;
-	layer.clearLayers();
+	const { L } = st.lib;
 	const z = map.getZoom();
 	if (z >= MIN_ZOOM_STOPS) {
 		const b = map.getBounds();
@@ -108,26 +104,58 @@ function redraw() {
 				.sort((a, b) => a.d - b.d)
 				.slice(0, 400)
 				.map((x) => x.s);
-		for (const s of st.visible) {
-			const taken = opts.taken.has(s.s),
-				sel = st.sel?.s === s.s;
-			const m = L.circleMarker([s.la, s.lo], {
+	} else st.visible = [];
+	const visibleIds = new Set(st.visible.map((s) => s.s));
+	for (const [id, entry] of st.markers) {
+		if (visibleIds.has(id)) continue;
+		layer.removeLayer(entry.marker);
+		st.markers.delete(id);
+	}
+	// markers are kept between redraws; a new one is drawn on top of the old ones, so the order has to be put right
+	let reorder = false;
+	for (const s of st.visible) {
+		const taken = opts.taken.has(s.s);
+		const sel = st.sel?.s === s.s;
+		const style = `${sel}|${taken}|${z >= 16}`;
+		let entry = st.markers.get(s.s);
+		if (!entry) {
+			const marker = L.circleMarker([s.la, s.lo]).addTo(layer);
+			marker.on('click', () => select(s, false));
+			entry = { marker, style: '' };
+			st.markers.set(s.s, entry);
+			reorder = true;
+		}
+		const m = entry.marker;
+		if (entry.style !== style) {
+			m.setStyle({
 				radius: sel ? 11 : z >= 16 ? 8 : 5,
 				color: sel ? '#fbbf24' : taken ? '#64748b' : '#38bdf8',
 				fillColor: sel ? '#fbbf24' : taken ? '#334155' : '#0b0f19',
 				fillOpacity: 1,
 				weight: sel ? 4 : 3,
-			}).addTo(layer);
-			m.on('click', () => select(s, false));
-			if (z >= 17 || sel)
+			});
+			entry.style = style;
+		}
+		if (z >= 17 || sel) {
+			if (!m.getTooltip()) {
 				m.bindTooltip(esc(s.n), {
 					permanent: true,
 					direction: 'top',
 					offset: [0, -8],
 					className: 'pk-tip',
 				});
+				reorder = true;
+			}
+		} else if (m.getTooltip()) m.unbindTooltip();
+	}
+	// the order of the list: of two stops that overlap, the same one is on top wherever the map came from
+	if (reorder) {
+		for (const s of st.visible) {
+			const m = st.markers.get(s.s)?.marker;
+			m?.bringToFront();
+			m?.getTooltip()?.bringToFront();
 		}
-	} else st.visible = [];
+	}
 	renderList();
 	renderSel();
 }
@@ -135,12 +163,9 @@ function redraw() {
 function select(s: StopInfo, fly: boolean) {
 	if (!st) return;
 	st.sel = s;
-	// flyTo emits no 'moveend' when the view does not change, so refresh the UI explicitly
-	if (fly) {
-		st.map.flyTo([s.la, s.lo], Math.max(st.map.getZoom(), 17), { duration: 0.6 });
-		renderSel();
-		renderList();
-	} else redraw();
+	// flyTo emits no 'moveend' when the view does not change, so the map is redrawn here in any case
+	if (fly) st.map.flyTo([s.la, s.lo], Math.max(st.map.getZoom(), 17), { duration: 0.6 });
+	redraw();
 	st.opts.peek([s.s]);
 }
 
@@ -182,7 +207,11 @@ function renderList() {
 		ul.innerHTML = `<li class="muted">${t('pk.zoom')}</li>`;
 		return;
 	}
-	if (!st.opts.goal) st.opts.peek(items.slice(0, 8).map((s) => s.s));
+	if (!st.opts.goal) {
+		const ids = items.slice(0, 8).map((s) => s.s);
+		clearTimeout(peekTimer);
+		peekTimer = setTimeout(() => st?.opts.peek(ids), PEEK_DELAY_MS);
+	}
 	ul.innerHTML =
 		items
 			.map(

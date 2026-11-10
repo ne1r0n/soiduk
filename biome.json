@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!**/dist", "!!**/package-lock.json", "!public/shapes.json", "!src/qr.svg"]
+    "includes": ["**", "!!**/dist", "!!**/package-lock.json", "!src/qr.svg"]
   },
   "formatter": {
     "enabled": true,

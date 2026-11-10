@@ -146,6 +146,7 @@ export const en: Record<Key, string> = {
 	'ed.data': 'Data:',
 	'ed.mapBy': 'Map ©',
 	'ed.build': 'build',
+	'ed.timetable': 'timetable of',
 
 	'def.loc': 'Location',
 	'def.goal': 'Destination',

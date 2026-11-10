@@ -3,5 +3,5 @@ dist
 *.log
 .DS_Store
 # generated from transport.tallinn.ee by `npm run setup` (CI does this on every deploy)
-public/stops.json
-public/gtfs.json
+public/data.json
+public/data/

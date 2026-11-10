@@ -145,6 +145,7 @@ export const ru = {
 	'ed.data': 'Данные:',
 	'ed.mapBy': 'Карта ©',
 	'ed.build': 'сборка',
+	'ed.timetable': 'расписание от',
 
 	'def.loc': 'Локация',
 	'def.goal': 'Цель',
