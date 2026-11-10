@@ -26,8 +26,8 @@ test('plural picks the right word form', () => {
 	assert.equal(plural('w.stops', 1), 'stop');
 	assert.equal(plural('w.stops', 2), 'stops');
 	setLang('et');
-	assert.equal(plural('w.goals', 1), 'eesmärk');
-	assert.equal(plural('w.goals', 2), 'eesmärki');
+	assert.equal(plural('w.goals', 1), 'sihtkoht');
+	assert.equal(plural('w.goals', 2), 'sihtkohta');
 	setLang('ru');
 });
 
