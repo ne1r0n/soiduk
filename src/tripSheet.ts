@@ -4,10 +4,10 @@ import { ensureGtfs } from './gtfs.ts';
 import { plural, t } from './i18n.ts';
 import { type Journey, journeyOf } from './journey.ts';
 import { toggleWatch } from './notify.ts';
-import { fmtClock, fmtMinutes, type LocationCfg, type Row } from './plan.ts';
+import { fmtClock, type LocationCfg, leaveText, type Row } from './plan.ts';
 import { locationRows } from './rows.ts';
 import { loadShapes, roadBetween } from './shapes.ts';
-import { selectedGoal, state } from './state.ts';
+import { atStop, selectedGoal, state } from './state.ts';
 import { loadStops } from './stops.ts';
 import { inDemo } from './store.ts';
 import { esc } from './util.ts';
@@ -194,13 +194,15 @@ export async function openTrip(loc: LocationCfg, key: string) {
 	const j = state.gtfs ? journeyOf(state.gtfs, row, goal, nearStops) : null;
 	const watching = () => state.watch?.pin === key;
 	const dest = row.arrive ? row.arrive.stopName : row.dep.dest;
+	const here = atStop(loc, row.siriId);
 	const sub = [
-		row.leaveInSec < 60 ? t('leave.now') : t('leave.in', { t: fmtMinutes(row.leaveInSec) }),
+		leaveText(row.leaveInSec, here),
 		row.arrive ? `${t('card.arrival').toLowerCase()} ${fmtClock(row.arrive.sec)}` : '',
 	]
 		.filter(Boolean)
 		.join(' · ');
-	const bellLabel = () => (watching() ? `🔕 ${t('trip.notifyOff')}` : `🔔 ${t('trip.notify')}`);
+	const bellLabel = () =>
+		watching() ? `🔕 ${t('trip.notifyOff')}` : `🔔 ${t(here ? 'trip.notifyDep' : 'trip.notify')}`;
 	root.hidden = false;
 	root.innerHTML = `
     <div class="pk-bg" data-tp="close"></div>

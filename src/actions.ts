@@ -1,3 +1,4 @@
+import { saveAtStop, toggleAtStop } from './atStop.ts';
 import { offerImport, replaceConfig } from './backup.ts';
 import { refresh } from './data.ts';
 import { LANGS, type Lang, setLang, t } from './i18n.ts';
@@ -15,7 +16,7 @@ import { closePicker } from './picker.ts';
 import { pickGoalStop, pickStop } from './pickers.ts';
 import { encodeConfig, slim } from './share.ts';
 import { edit, persist, render, state, stopKey } from './state.ts';
-import { loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
+import { inDemo, loadPrev, sanitize, save, saveSelection, uid } from './store.ts';
 import { setTheme, type ThemePref } from './theme.ts';
 import { openTimetable } from './timetable.ts';
 import { openTrip } from './tripSheet.ts';
@@ -189,6 +190,16 @@ async function onClick(e: MouseEvent) {
 			if (stop) openTimetable(stop);
 			break;
 		}
+		case 'at-stop':
+			// the walking time on a card: tap to see every departure, as if you were at the stop already
+			if (loc && stop) {
+				state.atStop = toggleAtStop(state.atStop, stopKey(loc.id, stop.siriId));
+				if (!inDemo()) saveAtStop(state.atStop);
+				render();
+				// whoever looks at exact times wants them fresh (this also updates a pinned notification)
+				refresh();
+			}
+			break;
 		case 'trip':
 			if (loc && btn.dataset.key) openTrip(loc, btn.dataset.key);
 			break;

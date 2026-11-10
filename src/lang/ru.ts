@@ -21,8 +21,13 @@ export const ru = {
 
 	'leave.now': 'выйти сейчас',
 	'leave.in': 'выйти через {t}',
+	// at the stop: countdown to the departure itself
+	'dep.now': 'сейчас',
+	'dep.in': 'через {t}',
 	'watch.now': 'Выходите сейчас',
 	'watch.at': 'Выходите в {at} (через {in})',
+	'watch.depNow': 'Отправляется сейчас',
+	'watch.depIn': 'Отправление через {in}',
 	'watch.dep': 'отправление',
 	'watch.arr': 'прибытие',
 	'notify.unsupported':
@@ -33,6 +38,8 @@ export const ru = {
 	'card.planTitle': 'Онлайн-данных нет, показано расписание',
 	'card.plan': 'по расписанию',
 	'card.dep': 'отправление',
+	'card.atStopOn': 'Уже иду или на остановке: показать все отправления, без времени пешком',
+	'card.atStopOff': 'Снова учитывать время пешком',
 	'card.loading': 'Загрузка…',
 	'card.nodata': 'Нет данных',
 	'card.noGoal': 'Рейсы с этой остановки не идут до «{goal}»',
@@ -42,6 +49,7 @@ export const ru = {
 	'card.xfer':
 		'Прямых рейсов нет — показаны варианты с одной пересадкой (второй рейс по расписанию).',
 	'trip.notify': 'Уведомить, когда выходить',
+	'trip.notifyDep': 'Уведомить об отправлении',
 	'trip.notifyOff': 'Не уведомлять',
 	'trip.close': 'Закрыть',
 	'trip.noMap': 'Маршрут не найден в расписании',

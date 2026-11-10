@@ -21,8 +21,12 @@ export const et: Record<Key, string> = {
 
 	'leave.now': 'väljuge kohe',
 	'leave.in': 'väljuge {t} pärast',
+	'dep.now': 'kohe',
+	'dep.in': '{t} pärast',
 	'watch.now': 'Väljuge kohe',
 	'watch.at': 'Väljuge kell {at} ({in} pärast)',
+	'watch.depNow': 'Väljub kohe',
+	'watch.depIn': 'Väljub {in} pärast',
 	'watch.dep': 'väljub',
 	'watch.arr': 'saabub',
 	'notify.unsupported':
@@ -33,6 +37,8 @@ export const et: Record<Key, string> = {
 	'card.planTitle': 'Reaalaja andmeid pole, näidatud on sõiduplaan',
 	'card.plan': 'sõiduplaani järgi',
 	'card.dep': 'väljumine',
+	'card.atStopOn': 'Olen juba teel või peatuses: näita kõiki väljumisi ilma kõndimisajata',
+	'card.atStopOff': 'Arvesta taas kõndimisaega',
 	'card.loading': 'Laadin…',
 	'card.nodata': 'Andmeid pole',
 	'card.noGoal': 'Sellest peatusest ei sõida reise sihtkohta „{goal}“',
@@ -42,6 +48,7 @@ export const et: Record<Key, string> = {
 	'card.xfer':
 		'Otseühendust pole. Näitan variante ühe ümberistumisega (teine reis sõiduplaani järgi).',
 	'trip.notify': 'Teavita, millal väljuda',
+	'trip.notifyDep': 'Teavita enne väljumist',
 	'trip.notifyOff': 'Ära teavita',
 	'trip.close': 'Sulge',
 	'trip.noMap': 'Marsruuti sõiduplaanist ei leitud',

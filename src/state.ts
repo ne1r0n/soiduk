@@ -1,5 +1,6 @@
 import type { StopDepartures } from './api.ts';
-import { clearArrivalCache, type GoalCfg, type LocationCfg } from './plan.ts';
+import { isAtStop, loadAtStop } from './atStop.ts';
+import { clearArrivalCache, type GoalCfg, type LocationCfg, type StopCfg } from './plan.ts';
 import { type Config, load, loadSelection, save } from './store.ts';
 import type { GtfsIndex } from './trip.ts';
 import { routeSort } from './util.ts';
@@ -19,6 +20,8 @@ export const state = {
 	lastOk: true,
 	/** which goal is selected per location ('' = all departures) */
 	selection: loadSelection(),
+	/** stops shown without the walking time («I'm at the stop»), see atStop.ts */
+	atStop: loadAtStop(),
 	/** timetable (GTFS), loaded lazily */
 	gtfs: null as GtfsIndex | null,
 	gtfsState: 'idle' as 'idle' | 'loading' | 'error',
@@ -58,6 +61,14 @@ export function selectedGoal(loc: LocationCfg): GoalCfg | undefined {
 	if (id === '') return undefined;
 	return goals.find((g) => g.id === id) ?? (id === undefined ? goals[0] : undefined);
 }
+
+/** is this stop switched to «at the stop»: every upcoming departure, no walking time? */
+export const atStop = (loc: LocationCfg, siriId: number) =>
+	isAtStop(state.atStop, stopKey(loc.id, siriId));
+
+/** minutes to walk to a stop – none once you are there */
+export const walkMinOf = (loc: LocationCfg, stop: StopCfg) =>
+	atStop(loc, stop.siriId) ? 0 : (stop.walkMin ?? loc.walkMin);
 
 // Rendering is registered by main.ts, so state-level code can trigger it without import cycles.
 let renderer: () => void = () => {};

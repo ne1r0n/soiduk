@@ -980,6 +980,29 @@ main {
 .head-right .dirs {
 	font-size: 12px;
 }
+.head-right {
+	flex: none;
+	margin-left: 10px;
+	white-space: nowrap;
+}
+/* the walking time is a switch: tap it on the way or at the stop to see every departure, tap again to go back */
+.at-toggle {
+	gap: 3px;
+	/* a finger-sized target that does not make the header taller */
+	margin: -8px 0 -8px 2px;
+	padding: 8px 0 8px 8px;
+	background: none;
+}
+.at-toggle .walk {
+	padding: 1px 8px;
+	border: 1px solid var(--line);
+	border-radius: 999px;
+}
+.at-toggle.on .walk {
+	background: color-mix(in srgb, var(--accent) 22%, transparent);
+	border-color: var(--accent);
+	color: var(--text);
+}
 
 /* watch (notification) */
 .rows li.pinnable {

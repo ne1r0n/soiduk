@@ -5,14 +5,14 @@ import { t } from './i18n.ts';
 import {
 	buildRows,
 	fmtClock,
-	fmtMinutes,
 	type GoalCfg,
 	type LocationCfg,
+	leaveText,
 	type Row,
 	type StopCfg,
 } from './plan.ts';
 import { XFER } from './rows.ts';
-import { selectedGoal, state } from './state.ts';
+import { atStop, selectedGoal, state, walkMinOf } from './state.ts';
 import { inDemo } from './store.ts';
 import type { GtfsIndex } from './trip.ts';
 import { esc } from './util.ts';
@@ -46,11 +46,6 @@ function viaLine(v: NonNullable<NonNullable<Row['arrive']>['via']>): string {
 	return `<span class="via" title="${t('card.change')}">⇄ ${esc(v.stopName)}${walk} → <span class="badge mini ${modeClass[v.mode]}">${esc(v.route)}</span> ${fmtClock(v.depSec)}</span>`;
 }
 
-/** "выйти через 5 мин" / "выйти сейчас" */
-function leaveText(sec: number): string {
-	return sec < 60 ? t('leave.now') : t('leave.in', { t: fmtMinutes(sec) });
-}
-
 function stopDirection(stop: StopCfg): string {
 	if (stop.label) return esc(stop.label);
 	const d = stopInfo(stop).dests;
@@ -66,7 +61,10 @@ function stopCard(
 	elapsed: number,
 	transfers = false,
 ): { html: string; empty: boolean } {
-	const walk = stop.walkMin ?? loc.walkMin;
+	// already on the way or at the stop: the walk counts as 0 min, so every departure that has not left yet
+	// is shown, counted down to the departure itself
+	const here = atStop(loc, stop.siriId);
+	const walk = walkMinOf(loc, stop);
 	const one: LocationCfg = {
 		id: `${loc.id}:${stop.siriId}`,
 		name: loc.name,
@@ -79,9 +77,15 @@ function stopCard(
 		? ` <span class="stale" title="${t('card.stale')}">⚠</span>`
 		: '';
 	const isPlanned = state.planned.has(stop.siriId);
+	const right = `<span class="walk">🚶 ${walk} ${t('unit.min')}${stale}</span><span class="dirs${isPlanned ? ' plan' : ''}" ${isPlanned ? `title="${t('card.planTitle')}"` : ''}>${isPlanned ? t('card.plan') : t('card.dep')}</span>`;
+	// the walking time is a switch (nothing to switch when the stop is at the door)
+	const headRight =
+		walk > 0 || here
+			? `<button type="button" class="head-right at-toggle${here ? ' on' : ''}" data-act="at-stop" data-stop="${stop.siriId}" aria-pressed="${here}" title="${t(here ? 'card.atStopOff' : 'card.atStopOn')}">${right}</button>`
+			: `<div class="head-right">${right}</div>`;
 	const head = `<header>
       <div class="stop-title"${stop.code ? ` data-act="timetable" data-stop="${stop.siriId}" role="button" aria-label="${t('tt.open')}"` : ''}><h2>${esc(stop.name)}</h2>${dir ? `<span class="dirs">${dir}</span>` : ''}</div>
-      <div class="head-right"><span class="walk">🚶 ${walk} ${t('unit.min')}${stale}</span><span class="dirs${isPlanned ? ' plan' : ''}" ${isPlanned ? `title="${t('card.planTitle')}"` : ''}>${isPlanned ? t('card.plan') : t('card.dep')}</span></div></header>`;
+      ${headRight}</header>`;
 	const shell = (inner: string, cls = '') => ({
 		html: `<section class="card ${cls}">${head}${inner}</section>`,
 		empty: false,
@@ -116,7 +120,7 @@ function stopCard(
       ${badge(r)}
       <span class="dest"><span class="dn">${esc(r.arrive ? r.arrive.stopName : r.dep.dest)}</span>${r.arrive ? `<span class="arr" title="${t('card.arrival')}">(${fmtClock(r.arrive.sec)})</span>` : ''}${pinned === rowKey(r) ? `<span class="pin" title="${t('card.pinned')}">🔔</span>` : ''}</span>
       <span class="when">${fmtClock(r.dep.expected)}${delayTag(r.delaySec)}</span>
-      <span class="in">${leaveText(r.leaveInSec)}</span>
+      <span class="in">${leaveText(r.leaveInSec, here)}</span>
       ${r.arrive?.via ? viaLine(r.arrive.via) : ''}
     </li>`,
 		)

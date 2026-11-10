@@ -213,6 +213,15 @@ export function fmtClock(secFromMidnight: number): string {
 	return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/**
+ * The line under a departure: «выйти через 5 мин» / «выйти сейчас». At the stop there is nowhere to walk,
+ * so it counts down to the departure itself: «через 5 мин» / «сейчас».
+ */
+export function leaveText(sec: number, atStop = false): string {
+	if (atStop) return sec < 60 ? t('dep.now') : t('dep.in', { t: fmtMinutes(sec) });
+	return sec < 60 ? t('leave.now') : t('leave.in', { t: fmtMinutes(sec) });
+}
+
 /** "now" / "5 min" / "1 h 05 min" */
 export function fmtMinutes(sec: number): string {
 	const m = Math.floor(sec / 60);

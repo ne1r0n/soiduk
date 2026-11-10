@@ -21,8 +21,12 @@ export const en: Record<Key, string> = {
 
 	'leave.now': 'leave now',
 	'leave.in': 'leave in {t}',
+	'dep.now': 'now',
+	'dep.in': 'in {t}',
 	'watch.now': 'Leave now',
 	'watch.at': 'Leave at {at} (in {in})',
+	'watch.depNow': 'Departing now',
+	'watch.depIn': 'Departs in {in}',
 	'watch.dep': 'departs',
 	'watch.arr': 'arrives',
 	'notify.unsupported':
@@ -33,6 +37,9 @@ export const en: Record<Key, string> = {
 	'card.planTitle': 'No live data, showing the timetable',
 	'card.plan': 'scheduled',
 	'card.dep': 'departure',
+	'card.atStopOn':
+		'Already on the way or at the stop: show every departure, without the walking time',
+	'card.atStopOff': 'Count the walking time again',
 	'card.loading': 'Loading…',
 	'card.nodata': 'No data',
 	'card.noGoal': 'Trips from this stop don’t go to “{goal}”',
@@ -42,6 +49,7 @@ export const en: Record<Key, string> = {
 	'card.xfer':
 		'No direct trips. Showing options with one change (the second trip is from the timetable).',
 	'trip.notify': 'Notify me when to leave',
+	'trip.notifyDep': 'Notify me before it departs',
 	'trip.notifyOff': 'Stop notifying',
 	'trip.close': 'Close',
 	'trip.noMap': 'Route not found in the timetable',

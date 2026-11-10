@@ -22,11 +22,19 @@ export function pickRow(rows: Row[], pin: string): Row | undefined {
 	return rows.find((r) => rowKey(r) === pin);
 }
 
-export function watchNotice(r: Row, locName: string): { title: string; body: string } {
+/** `atStop`: the stop is shown without the walking time, so the title counts down to the departure */
+export function watchNotice(
+	r: Row,
+	locName: string,
+	atStop = false,
+): { title: string; body: string } {
 	const walkSec = r.inSec - r.leaveInSec;
 	const leaveAt = fmtClock(r.dep.expected - walkSec);
-	const title =
-		r.leaveInSec < 60
+	const title = atStop
+		? r.inSec < 60
+			? t('watch.depNow')
+			: t('watch.depIn', { in: fmtMinutes(r.inSec) })
+		: r.leaveInSec < 60
 			? t('watch.now')
 			: t('watch.at', { at: leaveAt, in: fmtMinutes(r.leaveInSec) });
 	// arrival is only known when a goal was selected

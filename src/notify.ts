@@ -2,7 +2,7 @@ import { ensureGtfs } from './gtfs.ts';
 import { t } from './i18n.ts';
 import type { LocationCfg } from './plan.ts';
 import { locationRows } from './rows.ts';
-import { render, selectedGoal, state } from './state.ts';
+import { atStop, render, selectedGoal, state } from './state.ts';
 import { pickRow, rowKey, saveWatch, WATCH_TTL_MS, watchNotice } from './watch.ts';
 
 const TAG = 'soiduk-watch';
@@ -80,7 +80,7 @@ export async function updateWatch(first = false) {
 	if (!loud && !visible && notified.shown) return;
 	if (row.leaveInSec < 60) notified.key = key;
 	notified.shown = true;
-	const n = watchNotice(row, loc.name);
+	const n = watchNotice(row, loc.name, atStop(loc, row.siriId));
 	await reg.showNotification(n.title, {
 		body: n.body,
 		tag: TAG,

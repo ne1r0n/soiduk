@@ -26,6 +26,14 @@ test('watchNotice text', () => {
 	assert.equal(watchNotice(mk('42', 30600, 20), 'Дом').title, 'Выходите сейчас');
 });
 
+test('watchNotice at the stop counts down to the departure instead of telling when to leave', () => {
+	const at = (inSec: number): Row => ({ ...mk('42', 30600, inSec), inSec });
+	const n = watchNotice(at(420), 'Дом', true);
+	assert.equal(n.title, 'Отправление через 7 мин');
+	assert.match(n.body, /^42 → Mõisa · отправление 08:30 · прибытие 08:52\nДом$/);
+	assert.equal(watchNotice(at(20), 'Дом', true).title, 'Отправляется сейчас');
+});
+
 test('watchNotice without a goal: destination, no arrival', () => {
 	const { arrive: _, ...noArrival } = mk('42', 30600, 420);
 	const n = watchNotice(noArrival, 'Дом');
